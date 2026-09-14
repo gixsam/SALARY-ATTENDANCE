@@ -15,6 +15,35 @@
 
 ---
 
+## [Update 013] — Native ZKTeco "Total Time Card" Parser & Direct Excel Upload (2026-09-14)
+**Type:** Core Feature Enhancement — Biometric Data Ingestion & Auto Month Detection  
+**Status:** ✅ COMPLETED
+
+### User Context & Problem
+The user showed their actual ZKTeco biometric report titled **"Total Time Card_202609..."** with columns:
+`Employee ID | First Name | Date | Clock In | Clock Out | Total Hours | Total Leaves | Absence(h)`
+Previously, the parser expected simple 4-column space-separated logs (`ID Date In Out`). When lines from "Total Time Card" were pasted, the spaces in staff names (e.g., `Md. Ab. AHAD`) corrupted column indexes, and users had to manually switch the month dropdown.
+
+### Solution
+1. **Intelligent "Total Time Card" Parser (`parseAttendanceLine`)**:
+   - Parses dates flexibly in `YYYY-MM-DD`, `DD/MM/YYYY`, and `YYYY/MM/DD` formats.
+   - Extracts `Employee ID` (e.g. `4511`) and staff names even when names contain spaces.
+   - Accurately captures `Clock In` (e.g. `14:02`) and `Clock Out` (e.g. `23:35`).
+   - Automatically detects absent days where punches are blank.
+2. **Automatic Month & Year Detection & Switch**:
+   - Scans all parsed punches for dominant Month and Year (e.g., `2026-09-01` -> September 2026).
+   - Automatically switches `APP_STATE.currentMonth` and `APP_STATE.currentYear` and updates dropdowns without requiring manual user switching.
+3. **Direct ZKTeco Excel File Upload (`handleZkExcelUpload`)**:
+   - Added a direct **"Upload Total Time Card (.xlsx / .csv)"** button in both the `Paste Log` modal and `tab-import`.
+   - Uses `xlsx-js-style` (`XLSX.read`) to read `.xlsx`, `.xls`, `.csv` directly in the browser.
+   - Scans worksheet headers dynamically (`Employee ID`, `First Name`, `Date`, `Clock In`, `Clock Out`) and extracts all punches instantly.
+4. **Auto-Employee Registration**:
+   - If an imported punch belongs to a new employee not yet in the system, automatically creates their staff voucher profile with their name and ID.
+
+**Files Modified:** `index.html` (Modal UI, Import Tab UI, JS Parser Engine)
+
+---
+
 ## [Update 012] — Exact-Copy PDF: html2canvas at 820px / 2.8× DPI (2026-09-14)
 **Type:** PDF Engine Upgrade — Pixel-Perfect Website Screenshot  
 **Status:** ✅ COMPLETED

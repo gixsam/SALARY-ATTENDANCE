@@ -305,15 +305,31 @@
                     <h2 class="text-sm sm:text-base font-bold text-slate-800">Import Raw ZKTeco Biometric Logs</h2>
                     <p class="text-slate-500 text-[11px]">Paste raw logs to update staff vouchers instantly.</p>
                 </div>
+                <!-- Direct Excel Upload -->
+                <input type="file" id="tabZkFileInput" accept=".xlsx,.xls,.csv,.txt" class="hidden" onchange="handleZkExcelUpload(event, 'tab')">
+                <div class="bg-gradient-to-r from-emerald-50 to-teal-50 p-3 rounded-lg border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+                    <div>
+                        <span class="font-bold text-slate-800 block text-xs">Direct ZKTeco File Upload (.xlsx / .csv)</span>
+                        <span class="text-[11px] text-slate-600">Select your exported <b>"Total Time Card"</b> Excel file directly. Month & Year are auto-detected!</span>
+                    </div>
+                    <button type="button" onclick="document.getElementById('tabZkFileInput').click()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow transition flex items-center gap-1.5 shrink-0 text-xs">
+                        <i class="fa-solid fa-file-excel"></i> <span>Upload Excel File</span>
+                    </button>
+                </div>
+
                 <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                    <span class="font-bold text-slate-700 block mb-1">Supported Log Format (Tab, Comma, or Space separated):</span>
-                    <code class="text-indigo-700 font-mono text-[11px] block bg-white p-2 rounded border border-slate-200 leading-relaxed">
-                        Employee_ID [Tab/Space] Date(YYYY-MM-DD) [Tab] Check-In(HH:MM) [Tab] Check-Out(HH:MM)<br>
-                        18052 &nbsp;&nbsp; 2026-08-01 &nbsp;&nbsp; 08:50 &nbsp;&nbsp; 19:15<br>
-                        18548 &nbsp;&nbsp; 2026-08-01 &nbsp;&nbsp; 09:15 &nbsp;&nbsp; 19:00
+                    <span class="font-bold text-slate-700 block mb-1">Supported Formats:</span>
+                    <p class="text-slate-600 text-[11px] mb-1"><b>1. ZKTeco "Total Time Card" Format (Tab/Excel/Space):</b></p>
+                    <code class="text-indigo-700 font-mono text-[10.5px] block bg-white p-1.5 rounded border border-slate-200 leading-relaxed mb-2">
+                        Employee ID [Tab] First Name [Tab] Date [Tab] Clock In [Tab] Clock Out [Tab] Total Hours<br>
+                        4511 &nbsp;&nbsp; Md. Ab. AHAD &nbsp;&nbsp; 2026-09-01 &nbsp;&nbsp; 14:02 &nbsp;&nbsp; 23:35 &nbsp;&nbsp; 09:31
+                    </code>
+                    <p class="text-slate-600 text-[11px] mb-1"><b>2. Classic 4-Column Format:</b></p>
+                    <code class="text-indigo-700 font-mono text-[10.5px] block bg-white p-1.5 rounded border border-slate-200 leading-relaxed">
+                        18052 &nbsp;&nbsp; 2026-08-01 &nbsp;&nbsp; 08:50 &nbsp;&nbsp; 19:15
                     </code>
                 </div>
-                <textarea id="rawZkLogInput" rows="6" placeholder="Paste ZKTeco biometric logs here..." class="w-full p-2 font-mono text-xs border border-slate-300 rounded-lg bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                <textarea id="rawZkLogInput" rows="6" placeholder="Paste ZKTeco biometric logs or Total Time Card text here..." class="w-full p-2 font-mono text-xs border border-slate-300 rounded-lg bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                 <div class="flex items-center gap-2">
                     <button onclick="processZkLogs()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg shadow transition flex items-center gap-1.5">
                         <i class="fa-solid fa-bolt"></i> <span>Process & Update All</span>
@@ -546,8 +562,24 @@
                 <button onclick="closeModal('quickPasteModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-base"></i></button>
             </div>
             <div class="p-3.5 space-y-2.5">
-                <p class="text-slate-600 text-[11px]">Copy columns (ID, Date, CheckIn, CheckOut) from your machine or file and paste below:</p>
-                <textarea id="quickLogInput" rows="6" placeholder="18052    2026-08-01    08:45    19:20&#10;18548    2026-08-01    09:15    18:50" class="w-full p-2 font-mono border border-slate-300 rounded-lg bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                <!-- Direct Excel Upload -->
+                <input type="file" id="quickZkFileInput" accept=".xlsx,.xls,.csv,.txt" class="hidden" onchange="handleZkExcelUpload(event, 'quick')">
+                <div class="bg-gradient-to-r from-emerald-50 to-teal-50 p-2.5 rounded-lg border border-emerald-200 text-center space-y-1">
+                    <button type="button" onclick="document.getElementById('quickZkFileInput').click()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-md shadow transition flex items-center justify-center gap-2 text-xs">
+                        <i class="fa-solid fa-file-excel text-sm text-emerald-200"></i>
+                        <span>Upload Total Time Card (.xlsx / .csv)</span>
+                    </button>
+                    <p class="text-[10px] text-emerald-800">Directly upload the exported ZKTeco file. Month & Year are auto-detected!</p>
+                </div>
+
+                <div class="flex items-center gap-2 my-1">
+                    <div class="h-px bg-slate-200 flex-1"></div>
+                    <span class="text-[10px] text-slate-400 font-bold uppercase">OR PASTE TEXT</span>
+                    <div class="h-px bg-slate-200 flex-1"></div>
+                </div>
+
+                <p class="text-slate-600 text-[11px]">Paste from Excel or ZKTeco (supports <b>Total Time Card</b> format):</p>
+                <textarea id="quickLogInput" rows="5" placeholder="Employee ID    First Name    Date          Clock In    Clock Out&#10;4511           Md. Ab. AHAD  2026-09-01    14:02       23:35&#10;18052                        2026-08-01    08:45       19:20" class="w-full p-2 font-mono text-[11px] border border-slate-300 rounded-lg bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                 <div class="flex justify-end gap-2 pt-1">
                     <button type="button" onclick="closeModal('quickPasteModal')" class="px-3 py-1.5 border border-slate-300 rounded-lg">Cancel</button>
                     <button type="button" onclick="applyQuickZkLogs()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow">Apply & View Voucher</button>
@@ -1409,6 +1441,214 @@
             showToast(`Updated voucher for ${emp.name}`, 'success');
         }
 
+        // ─────────────────────────────────────────────────────────────────────
+        // SMART ZKTECO & "TOTAL TIME CARD" PARSER ENGINE (Update 013)
+        // Auto-detects ZKTeco Total Time Card format, dates, month/year switching
+        // ─────────────────────────────────────────────────────────────────────
+
+        function parseDateString(str) {
+            if (!str) return null;
+            if (str instanceof Date && !isNaN(str)) {
+                return str.toISOString().slice(0, 10);
+            }
+            str = String(str).trim();
+            // Match YYYY-MM-DD or YYYY/MM/DD
+            let m = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+            if (m) return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
+            // Match DD-MM-YYYY or DD/MM/YYYY
+            m = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})/);
+            if (m) {
+                let yr = m[3].length === 2 ? '20' + m[3] : m[3];
+                return `${yr}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
+            }
+            return null;
+        }
+
+        function parseAttendanceLine(line) {
+            line = line.trim();
+            if (!line) return null;
+            const lower = line.toLowerCase();
+            if (lower.includes('total time card') || lower.includes('employee id') || lower.includes('clock in')) {
+                return null; // Header row
+            }
+
+            // Check if line contains a recognizable date
+            const dateMatch = line.match(/\b(\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\b/);
+            if (!dateMatch) return null;
+
+            const rawDate = dateMatch[1];
+            const dateStr = parseDateString(rawDate);
+            if (!dateStr) return null;
+
+            const datePos = line.indexOf(rawDate);
+            const beforeDate = line.substring(0, datePos).trim();
+            const afterDate = line.substring(datePos + rawDate.length).trim();
+
+            // Extract ID (first numeric token in beforeDate)
+            const idMatch = beforeDate.match(/\b(\d+)\b/);
+            if (!idMatch) return null;
+            const id = idMatch[1];
+
+            // Extract employee name if present (between ID and date)
+            const namePart = beforeDate.replace(idMatch[1], '').trim();
+
+            // Extract Clock In and Clock Out (times in afterDate)
+            const timeMatches = afterDate.match(/\b\d{1,2}:\d{2}\b/g) || [];
+            const inTime = timeMatches[0] || '';
+            const outTime = timeMatches[1] || '';
+
+            return { id, name: namePart, dateStr, inTime, outTime };
+        }
+
+        function processParsedRecords(records) {
+            if (!records || records.length === 0) {
+                showToast('No valid attendance records found', 'error');
+                return;
+            }
+
+            let count = 0;
+            const monthCounts = {};
+
+            records.forEach(r => {
+                if (!r || !r.id || !r.dateStr) return;
+                
+                // Track months to auto-switch calendar
+                const parts = r.dateStr.split('-');
+                if (parts.length >= 2) {
+                    const key = `${parts[0]}-${parts[1]}`;
+                    monthCounts[key] = (monthCounts[key] || 0) + 1;
+                }
+
+                // If this is a new staff not in current list, auto-register
+                if (!APP_STATE.employees.some(e => e.id === r.id)) {
+                    APP_STATE.employees.push({
+                        id: r.id,
+                        name: r.name ? r.name.toUpperCase() : `STAFF ${r.id}`,
+                        dept: 'STAFF',
+                        basicSalary: 15000,
+                        advance: 0,
+                        fine: 0,
+                        approvalNote: 'Imported ZKTeco'
+                    });
+                }
+
+                // Store punch in attendance logs
+                APP_STATE.attendanceLogs[`${r.id}_${r.dateStr}`] = {
+                    inTime: r.inTime || '',
+                    outTime: r.outTime || '',
+                    remarks: ''
+                };
+                count++;
+            });
+
+            // Auto-detect dominant month and year
+            let bestKey = null, maxCount = 0;
+            for (let k in monthCounts) {
+                if (monthCounts[k] > maxCount) { maxCount = monthCounts[k]; bestKey = k; }
+            }
+
+            let monthNotice = '';
+            if (bestKey) {
+                const [bestY, bestM] = bestKey.split('-');
+                const mIdx = parseInt(bestM, 10) - 1;
+                const yVal = parseInt(bestY, 10);
+                if (mIdx !== APP_STATE.currentMonth || yVal !== APP_STATE.currentYear) {
+                    APP_STATE.currentMonth = mIdx;
+                    APP_STATE.currentYear = yVal;
+                    const ySel = document.getElementById('selectYear');
+                    const mSel = document.getElementById('selectMonth');
+                    if (ySel) ySel.value = yVal;
+                    if (mSel) mSel.value = mIdx;
+                    monthNotice = ` (Switched to ${MONTH_NAMES[mIdx]} ${yVal})`;
+                }
+            }
+
+            renderEmployeeSelect();
+            updateCalculationsAndTables();
+            saveStateToStorage();
+            showToast(`Processed ${count} punches successfully!${monthNotice}`, 'success');
+        }
+
+        function processRawLogText(text) {
+            const records = [];
+            text.trim().split(/\r?\n/).forEach(line => {
+                const rec = parseAttendanceLine(line);
+                if (rec) records.push(rec);
+            });
+            processParsedRecords(records);
+        }
+
+        function handleZkExcelUpload(event, source) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const wb = XLSX.read(data, { type: 'array', cellDates: true });
+                    const records = [];
+
+                    wb.SheetNames.forEach(sheetName => {
+                        const ws = wb.Sheets[sheetName];
+                        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+                        let idCol = -1, nameCol = -1, dateCol = -1, inCol = -1, outCol = -1;
+
+                        // Scan for header row
+                        for (let r = 0; r < Math.min(rows.length, 10); r++) {
+                            const row = rows[r];
+                            if (!Array.isArray(row)) continue;
+                            for (let c = 0; c < row.length; c++) {
+                                const val = String(row[c] || '').toLowerCase().trim();
+                                if (val.includes('employee id') || val === 'id' || val === 'emp id') idCol = c;
+                                if (val.includes('first name') || val.includes('name')) nameCol = c;
+                                if (val === 'date' || val.includes('attendance date')) dateCol = c;
+                                if (val.includes('clock in') || val === 'in time' || val === 'check in' || val === 'in') inCol = c;
+                                if (val.includes('clock out') || val === 'out time' || val === 'check out' || val === 'out') outCol = c;
+                            }
+                            if (dateCol !== -1 && idCol !== -1) break;
+                        }
+
+                        rows.forEach(row => {
+                            if (!Array.isArray(row)) return;
+                            let id = '', name = '', dateStr = '', inTime = '', outTime = '';
+                            if (idCol !== -1 && dateCol !== -1) {
+                                id = String(row[idCol] || '').trim();
+                                name = nameCol !== -1 ? String(row[nameCol] || '').trim() : '';
+                                dateStr = parseDateString(row[dateCol]);
+                                inTime = inCol !== -1 ? String(row[inCol] || '').trim() : '';
+                                outTime = outCol !== -1 ? String(row[outCol] || '').trim() : '';
+                            } else {
+                                // Fallback: join row with tabs and use line parser
+                                const fallbackRec = parseAttendanceLine(row.join('\t'));
+                                if (fallbackRec) {
+                                    id = fallbackRec.id;
+                                    name = fallbackRec.name;
+                                    dateStr = fallbackRec.dateStr;
+                                    inTime = fallbackRec.inTime;
+                                    outTime = fallbackRec.outTime;
+                                }
+                            }
+
+                            if (id && dateStr && /^\d+$/.test(id)) {
+                                records.push({ id, name, dateStr, inTime, outTime });
+                            }
+                        });
+                    });
+
+                    processParsedRecords(records);
+                    if (source === 'quick') closeModal('quickPasteModal');
+                    switchTab('tab-a4');
+                } catch (err) {
+                    console.error('Excel upload error:', err);
+                    showToast('Failed to parse Excel file: ' + err.message, 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = '';
+        }
+
         function applyQuickZkLogs() {
             const el = document.getElementById('quickLogInput');
             if(!el || !el.value.trim()) return;
@@ -1423,26 +1663,6 @@
             if(!el || !el.value.trim()) return;
             processRawLogText(el.value);
             switchTab('tab-a4');
-        }
-
-        function processRawLogText(text) {
-            let count = 0;
-            text.trim().split(/\r?\n/).forEach(line => {
-                const p = line.trim().split(/[\t,;|\s]+/);
-                if (p.length >= 3) {
-                    let id = p[0].trim(), d = p[1].trim(), inT = p[2].trim(), ouT = p[3]?p[3].trim():'';
-                    if (d.includes('/')) {
-                        let dp = d.split('/');
-                        d = dp[0].length===4 ? `${dp[0]}-${dp[1].padStart(2,'0')}-${dp[2].padStart(2,'0')}` : `${dp[2].length===2?'20'+dp[2]:dp[2]}-${dp[1].padStart(2,'0')}-${dp[0].padStart(2,'0')}`;
-                    }
-                    if(id && d) {
-                        APP_STATE.attendanceLogs[`${id}_${d}`] = { inTime: inT, outTime: ouT, remarks: '' };
-                        count++;
-                    }
-                }
-            });
-            updateCalculationsAndTables();
-            showToast(`Processed ${count} logs successfully`, 'success');
         }
 
         function renderSalarySummary() {
