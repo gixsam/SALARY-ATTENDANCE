@@ -15,6 +15,26 @@
 
 ---
 
+## [Update 012] — Exact-Copy PDF: html2canvas at 820px / 2.8× DPI (2026-09-14)
+**Type:** PDF Engine Upgrade — Pixel-Perfect Website Screenshot  
+**Status:** ✅ COMPLETED
+
+### Problem
+Update 011 (jsPDF vector engine) produced a PDF that was structurally correct but visually different from the website — fonts were smaller, row heights different, not an "exact copy" of what is shown on screen.
+
+### Solution
+New function `_captureVoucherExact(emp)`:
+1. Renders the selected employee's voucher on-screen with `renderA4Sheet()`
+2. Clones the entire `.a4-screen-wrapper` into an off-screen 820px-wide sandbox
+3. Captures with `html2canvas({ scale: 2.8, windowWidth: 820 })` — the `windowWidth: 820` activates all Tailwind `sm:` classes, giving the same larger font sizes visible on screen
+4. Fits the resulting image to A4 page (margin 5mm each side, vertically centered)
+
+**Result:** PDF is a pixel-perfect screenshot of the website voucher — exact same colors, font sizes, row heights, and visual layout.
+
+**Files Modified:** `index.html` — replaced `downloadSingleEmployeePdf()` and `downloadAllEmployeesPdf()` (lines 1978–2020) with `_captureVoucherExact()` + improved download functions
+
+---
+
 ## [Update 011] — Pure jsPDF Vector PDF Engine (2026-09-14)
 **Type:** Major Feature Replacement — PDF Generation Complete Rewrite  
 **Status:** ✅ COMPLETED

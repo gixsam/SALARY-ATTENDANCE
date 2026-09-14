@@ -1975,23 +1975,109 @@
             });
         }
 
+        // ─────────────────────────────────────────────────────────────────────
+        // EXACT-COPY PDF CAPTURE (Update 012) — html2canvas at 820px width
+        // Produces a pixel-perfect copy of the on-screen voucher
+        // ─────────────────────────────────────────────────────────────────────
+
+        async function _captureVoucherExact(emp) {
+            // 1. Make sure the right employee is rendered on-screen
+            const sel = document.getElementById('a4EmpSelect');
+            if (sel.value !== emp.id) {
+                sel.value = emp.id;
+                renderA4Sheet();
+                await new Promise(r => setTimeout(r, 60));
+            }
+
+            const voucherBox = document.querySelector('#a4SheetContainer .a4-voucher-box');
+            if (!voucherBox) throw new Error('Voucher element not found');
+
+            // 2. Build an off-screen 794px-wide sandbox that mirrors the voucher exactly
+            const sandbox = document.createElement('div');
+            Object.assign(sandbox.style, {
+                position: 'fixed', left: '-9999px', top: '0',
+                width: '820px', minWidth: '820px', maxWidth: '820px',
+                background: 'transparent', zIndex: '-1',
+                pointerEvents: 'none', overflow: 'visible'
+            });
+
+            // 3. Clone the ENTIRE a4-screen-wrapper so all sm: classes apply at 820px
+            const wrapper = document.querySelector('.a4-screen-wrapper') || voucherBox.parentElement;
+            const clone = wrapper.cloneNode(true);
+            Object.assign(clone.style, {
+                width: '820px', minWidth: '820px', maxWidth: '820px',
+                margin: '0', padding: '0'
+            });
+            // Remove any hidden/collapsed states in the clone
+            clone.querySelectorAll('[class*="hidden"]').forEach(el => {
+                // Keep hidden only if it's truly supposed to be hidden (e.g. PDF progress card)
+            });
+
+            sandbox.appendChild(clone);
+            document.body.appendChild(sandbox);
+
+            // 4. Wait for fonts and layout
+            if (document.fonts && document.fonts.ready) await document.fonts.ready;
+            await new Promise(r => setTimeout(r, 80));
+
+            const voucherInSandbox = sandbox.querySelector('.a4-voucher-box');
+            if (!voucherInSandbox) {
+                sandbox.remove();
+                throw new Error('Cloned voucher not found in sandbox');
+            }
+
+            // 5. Capture with html2canvas — windowWidth 820 activates sm: Tailwind classes
+            try {
+                const canvas = await html2canvas(voucherInSandbox, {
+                    scale: 2.8,
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    width: voucherInSandbox.offsetWidth || 796,
+                    windowWidth: 820
+                });
+                return canvas;
+            } finally {
+                sandbox.remove();
+            }
+        }
+
         async function downloadSingleEmployeePdf() {
             const sel = document.getElementById('a4EmpSelect');
-            const emp = APP_STATE.employees.find(e => e.id === sel.value) || APP_STATE.employees[0];
+            const origId = sel.value;
+            const emp = APP_STATE.employees.find(e => e.id === origId) || APP_STATE.employees[0];
             const shortMonth = MONTH_NAMES[APP_STATE.currentMonth].substring(0, 3);
             const fileName = `Voucher_${emp.id}_${emp.name.replace(/\s+/g,'_')}_${shortMonth}_${APP_STATE.currentYear}.pdf`;
 
-            document.getElementById('pdf-progress-card').classList.remove('hidden');
-            document.getElementById('pdf-progress-text').textContent = `Generating PDF: ${emp.name}`;
+            const card = document.getElementById('pdf-progress-card');
+            const text = document.getElementById('pdf-progress-text');
+            card.classList.remove('hidden');
+            text.textContent = `Generating PDF: ${emp.name}...`;
+
             try {
-                const pdf = buildVoucherPdf(emp);
+                const canvas = await _captureVoucherExact(emp);
+                const imgData = canvas.toDataURL('image/jpeg', 0.97);
+
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+
+                const PW = 210, PH = 297, MG = 5;
+                const usableW = PW - MG * 2;
+                const imgH = (canvas.height / canvas.width) * usableW;
+                const topY = Math.max(MG, (PH - imgH) / 2);
+
+                pdf.addImage(imgData, 'JPEG', MG, topY, usableW, Math.min(imgH, PH - MG * 2));
                 pdf.save(fileName);
                 showToast(`Downloaded: ${fileName}`, 'success');
             } catch(e) {
                 console.error('PDF error:', e);
-                showToast('PDF generation failed: ' + e.message, 'error');
+                showToast('PDF failed: ' + e.message, 'error');
             } finally {
-                document.getElementById('pdf-progress-card').classList.add('hidden');
+                // Restore original employee
+                sel.value = origId;
+                renderA4Sheet();
+                card.classList.add('hidden');
             }
         }
 
@@ -2000,21 +2086,37 @@
             const fileName   = `Best_Force_Ltd_All_Vouchers_${shortMonth}_${APP_STATE.currentYear}.pdf`;
             const card = document.getElementById('pdf-progress-card');
             const text = document.getElementById('pdf-progress-text');
+            const sel  = document.getElementById('a4EmpSelect');
+            const origId = sel.value;
             card.classList.remove('hidden');
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+            const PW = 210, PH = 297, MG = 5;
+            const usableW = PW - MG * 2;
+
             try {
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4', compress:true });
-                APP_STATE.employees.forEach((emp, i) => {
+                for (let i = 0; i < APP_STATE.employees.length; i++) {
+                    const emp = APP_STATE.employees[i];
                     text.textContent = `Generating (${i+1}/${APP_STATE.employees.length}): ${emp.name}`;
-                    if (i > 0) pdf.addPage('a4','portrait');
-                    _drawVoucherOnPdf(pdf, emp);
-                });
+
+                    const canvas = await _captureVoucherExact(emp);
+                    const imgData = canvas.toDataURL('image/jpeg', 0.97);
+                    const imgH = (canvas.height / canvas.width) * usableW;
+                    const topY = Math.max(MG, (PH - imgH) / 2);
+
+                    if (i > 0) pdf.addPage('a4', 'portrait');
+                    pdf.addImage(imgData, 'JPEG', MG, topY, usableW, Math.min(imgH, PH - MG * 2));
+                }
+
                 pdf.save(fileName);
                 showToast(`Downloaded all ${APP_STATE.employees.length} vouchers`, 'success');
             } catch(e) {
                 console.error('Batch PDF error:', e);
                 showToast('Batch PDF failed: ' + e.message, 'error');
             } finally {
+                sel.value = origId;
+                renderA4Sheet();
                 card.classList.add('hidden');
             }
         }
