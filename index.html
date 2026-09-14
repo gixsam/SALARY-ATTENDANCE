@@ -51,11 +51,9 @@
         .voucher-table td, .voucher-table th {
             text-align: center !important;
             vertical-align: middle !important;
-            padding-top: 2.5px !important;
-            padding-bottom: 2.5px !important;
-            padding-left: 1px !important;
-            padding-right: 1px !important;
-            line-height: 1.35 !important;
+            padding: 3.5px 1px;
+            line-height: 1.25;
+            box-sizing: border-box;
         }
 
         @media print {
@@ -1131,14 +1129,14 @@
                     tMin += c.tm; rowH = c.h>0?c.h:'0'; rowM = c.m>0?c.m:'';
                 }
 
-                rows += `<tr class="${rCls} border-b border-slate-300 text-[8px] sm:text-[9.5px]">
+                rows += `<tr class="${rCls} border-b border-slate-300 text-[8.5px] sm:text-[9.5px]">
                     <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono font-bold">${d}/${APP_STATE.currentMonth+1}/${String(APP_STATE.currentYear).slice(-2)}</td>
                     <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono">${c.di||log.inTime||''}</td>
                     <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono">${c.do||log.outTime||''}</td>
                     <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono font-black">${rowH}</td>
                     <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono font-black">${rowM}</td>
                     <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-black text-red-600">${abs}</td>
-                    <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="font-medium truncate text-[8px] sm:text-[8.5px]">${rem}</td>
+                    <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="font-medium whitespace-nowrap overflow-hidden text-ellipsis px-0.5 text-[8px] sm:text-[8.5px]">${rem}</td>
                 </tr>`;
             }
 
@@ -1676,25 +1674,200 @@
             if (document.fonts && document.fonts.ready) await document.fonts.ready;
             await new Promise(r => setTimeout(r, 60));
 
-            return await html2canvas(voucherElement, {
-                scale: 2.2,
-                useCORS: true,
-                allowTaint: true,
-                logging: false,
-                backgroundColor: '#ffffff',
-                windowWidth: 780,
-                onclone: function(clonedDoc) {
-                    const clonedWrapper = clonedDoc.querySelector('.a4-screen-wrapper');
-                    const clonedVoucher = clonedDoc.querySelector('.a4-voucher-box');
-                    if (clonedWrapper) { clonedWrapper.style.width = '760px'; clonedWrapper.style.maxWidth = '760px'; }
-                    if (clonedVoucher) { clonedVoucher.style.width = '760px'; clonedVoucher.style.maxWidth = '760px'; clonedVoucher.style.padding = '14px 16px'; }
-                    clonedDoc.querySelectorAll('.voucher-table th, .voucher-table td').forEach(cell => {
-                        cell.setAttribute('align', 'center');
-                        cell.style.textAlign = 'center';
-                        cell.style.verticalAlign = 'middle';
+            // Create an isolated sandbox attached to document.body
+            const sandbox = document.createElement('div');
+            sandbox.id = 'pdf-render-sandbox';
+            sandbox.style.position = 'fixed';
+            sandbox.style.left = '0';
+            sandbox.style.top = '0';
+            sandbox.style.width = '794px';
+            sandbox.style.minWidth = '794px';
+            sandbox.style.maxWidth = '794px';
+            sandbox.style.background = '#ffffff';
+            sandbox.style.zIndex = '99990';
+            sandbox.style.pointerEvents = 'none';
+            sandbox.style.margin = '0';
+            sandbox.style.padding = '0';
+            sandbox.style.boxSizing = 'border-box';
+
+            // Deep-clone the voucher element
+            const clone = voucherElement.cloneNode(true);
+            clone.style.width = '794px';
+            clone.style.minWidth = '794px';
+            clone.style.maxWidth = '794px';
+            clone.style.boxSizing = 'border-box';
+            clone.style.padding = '14px 18px';
+            clone.style.background = '#ffffff';
+            clone.style.borderRadius = '0px';
+            clone.style.border = '2.5px solid #0f172a';
+            clone.style.margin = '0';
+            clone.style.boxShadow = 'none';
+
+            // 1. Header Styling
+            const logoImg = clone.querySelector('img');
+            if (logoImg) {
+                logoImg.style.width = '42px';
+                logoImg.style.height = '42px';
+                logoImg.style.marginBottom = '3px';
+                logoImg.style.display = 'block';
+            }
+            const h1 = clone.querySelector('h1');
+            if (h1) {
+                h1.style.fontSize = '20px';
+                h1.style.fontWeight = '900';
+                h1.style.lineHeight = '1.2';
+                h1.style.margin = '1px 0';
+                h1.style.color = '#020617';
+            }
+            const monthBadge = clone.querySelector('.bg-slate-100');
+            if (monthBadge) {
+                monthBadge.style.fontSize = '10.5px';
+                monthBadge.style.fontWeight = '800';
+                monthBadge.style.padding = '3px 12px';
+                monthBadge.style.marginTop = '2px';
+            }
+
+            // 2. Employee Info Table (ID, Nam, Desig)
+            const tables = clone.querySelectorAll('table');
+            const empTable = tables[0];
+            if (empTable) {
+                empTable.style.width = '100%';
+                empTable.style.borderCollapse = 'collapse';
+                empTable.style.tableLayout = 'fixed';
+                empTable.style.marginBottom = '6px';
+                empTable.style.border = '2px solid #0f172a';
+                empTable.querySelectorAll('tr').forEach(tr => {
+                    tr.style.height = '28px';
+                });
+                empTable.querySelectorAll('td').forEach(td => {
+                    td.style.setProperty('height', '28px', 'important');
+                    td.style.setProperty('line-height', '28px', 'important');
+                    td.style.setProperty('padding', '0 4px', 'important');
+                    td.style.setProperty('font-size', '11.5px', 'important');
+                    td.style.setProperty('text-align', 'center', 'important');
+                    td.style.setProperty('vertical-align', 'middle', 'important');
+                    td.style.setProperty('box-sizing', 'border-box', 'important');
+                    td.style.setProperty('overflow', 'hidden', 'important');
+                    td.style.setProperty('white-space', 'nowrap', 'important');
+                    td.style.setProperty('text-overflow', 'ellipsis', 'important');
+                });
+            }
+
+            // 3. Main Attendance Table
+            const attTable = clone.querySelector('.voucher-table');
+            if (attTable) {
+                attTable.style.width = '100%';
+                attTable.style.tableLayout = 'fixed';
+                attTable.style.borderCollapse = 'collapse';
+
+                // thead th
+                attTable.querySelectorAll('thead th').forEach(th => {
+                    th.style.setProperty('height', '25px', 'important');
+                    th.style.setProperty('line-height', '25px', 'important');
+                    th.style.setProperty('padding', '0', 'important');
+                    th.style.setProperty('font-size', '11px', 'important');
+                    th.style.setProperty('font-weight', '800', 'important');
+                    th.style.setProperty('text-align', 'center', 'important');
+                    th.style.setProperty('vertical-align', 'middle', 'important');
+                    th.style.setProperty('box-sizing', 'border-box', 'important');
+                });
+
+                // tbody rows & td
+                const tbodyRows = attTable.querySelectorAll('tbody tr');
+                tbodyRows.forEach(tr => {
+                    tr.style.setProperty('height', '23px', 'important');
+                    tr.style.setProperty('box-sizing', 'border-box', 'important');
+                    tr.querySelectorAll('td').forEach(td => {
+                        td.style.setProperty('height', '23px', 'important');
+                        td.style.setProperty('line-height', '23px', 'important');
+                        td.style.setProperty('padding', '0', 'important');
+                        td.style.setProperty('font-size', '11px', 'important');
+                        td.style.setProperty('text-align', 'center', 'important');
+                        td.style.setProperty('vertical-align', 'middle', 'important');
+                        td.style.setProperty('box-sizing', 'border-box', 'important');
+                        td.style.setProperty('overflow', 'hidden', 'important');
+                        td.style.setProperty('white-space', 'nowrap', 'important');
+                        td.style.setProperty('text-overflow', 'clip', 'important');
+                    });
+                });
+
+                // tfoot td
+                attTable.querySelectorAll('tfoot td').forEach(td => {
+                    td.style.setProperty('height', '25px', 'important');
+                    td.style.setProperty('line-height', '25px', 'important');
+                    td.style.setProperty('padding', '0', 'important');
+                    td.style.setProperty('font-size', '11px', 'important');
+                    td.style.setProperty('font-weight', '800', 'important');
+                    td.style.setProperty('text-align', 'center', 'important');
+                    td.style.setProperty('vertical-align', 'middle', 'important');
+                    td.style.setProperty('box-sizing', 'border-box', 'important');
+                });
+            }
+
+            // 4. Duty & Salary Breakdown
+            const breakdownGrid = clone.querySelector('.grid.grid-cols-2');
+            if (breakdownGrid) {
+                breakdownGrid.style.marginTop = '6px';
+                breakdownGrid.style.marginBottom = '6px';
+                const subTable = breakdownGrid.querySelector('table');
+                if (subTable) {
+                    subTable.querySelectorAll('tr').forEach(tr => {
+                        tr.style.height = '22px';
+                    });
+                    subTable.querySelectorAll('td').forEach(td => {
+                        td.style.height = '22px';
+                        td.style.lineHeight = '22px';
+                        td.style.padding = '0 6px';
+                        td.style.fontSize = '11px';
+                        td.style.verticalAlign = 'middle';
+                        td.style.boxSizing = 'border-box';
                     });
                 }
-            });
+                const rightCard = breakdownGrid.children[1];
+                if (rightCard) {
+                    rightCard.style.padding = '6px 8px';
+                    rightCard.querySelectorAll('div').forEach(d => {
+                        d.style.fontSize = '11px';
+                    });
+                    const netSpan = rightCard.querySelector('.text-emerald-800');
+                    if (netSpan) {
+                        netSpan.style.fontSize = '13px';
+                        netSpan.style.fontWeight = '900';
+                        netSpan.style.padding = '2px 8px';
+                    }
+                }
+            }
+
+            // 5. Signature Lines Clearance
+            const sigDiv = clone.querySelector('.grid.grid-cols-4');
+            if (sigDiv) {
+                sigDiv.style.marginTop = '34px';
+                sigDiv.style.marginBottom = '6px';
+                sigDiv.querySelectorAll('div > div').forEach(d => {
+                    d.style.fontSize = '10px';
+                    d.style.fontWeight = '800';
+                    d.style.paddingTop = '6px';
+                    d.style.borderTop = '2px solid #0f172a';
+                    d.style.textAlign = 'center';
+                });
+            }
+
+            sandbox.appendChild(clone);
+            document.body.appendChild(sandbox);
+
+            try {
+                return await html2canvas(clone, {
+                    scale: 2.5,
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    width: 794,
+                    windowWidth: 794
+                });
+            } finally {
+                sandbox.remove();
+            }
         }
 
         async function downloadSingleEmployeePdf() {
@@ -1704,6 +1877,7 @@
             const fileName = `Voucher_${emp.id}_${emp.name.replace(/\s+/g, '_')}_${shortMonth}_${APP_STATE.currentYear}.pdf`;
 
             document.getElementById('pdf-progress-card').classList.remove('hidden');
+            document.getElementById('pdf-progress-text').textContent = `Generating PDF: ${emp.name}`;
             renderA4Sheet();
             await new Promise(r => setTimeout(r, 80));
 
@@ -1718,7 +1892,15 @@
                 const imgData = canvas.toDataURL('image/jpeg', 0.98);
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-                pdf.addImage(imgData, 'JPEG', 5, 5, 200, (canvas.height * 200) / canvas.width);
+
+                const pageWidth = 210;
+                const pageHeight = 297;
+                const marginX = 6;
+                const targetWidth = pageWidth - (marginX * 2); // 198mm
+                const targetHeight = (canvas.height * targetWidth) / canvas.width;
+                const topMargin = Math.max(6, (pageHeight - targetHeight) / 2);
+
+                pdf.addImage(imgData, 'JPEG', marginX, topMargin, targetWidth, Math.min(targetHeight, pageHeight - 12));
                 pdf.save(fileName);
                 showToast(`Downloaded: ${fileName}`, 'success');
             } catch(e) {
@@ -1742,6 +1924,10 @@
             try {
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+                const pageWidth = 210;
+                const pageHeight = 297;
+                const marginX = 6;
+                const targetWidth = pageWidth - (marginX * 2); // 198mm
 
                 for(let i=0; i<APP_STATE.employees.length; i++) {
                     const emp = APP_STATE.employees[i];
@@ -1755,13 +1941,15 @@
 
                     const canvas = await captureVoucherToCanvas(voucher);
                     const imgData = canvas.toDataURL('image/jpeg', 0.98);
+                    const targetHeight = (canvas.height * targetWidth) / canvas.width;
+                    const topMargin = Math.max(6, (pageHeight - targetHeight) / 2);
 
                     if (i > 0) pdf.addPage('a4', 'portrait');
-                    pdf.addImage(imgData, 'JPEG', 5, 5, 200, (canvas.height * 200) / canvas.width);
+                    pdf.addImage(imgData, 'JPEG', marginX, topMargin, targetWidth, Math.min(targetHeight, pageHeight - 12));
                 }
 
                 pdf.save(fileName);
-                showToast('Downloaded all 25 vouchers', 'success');
+                showToast(`Downloaded all ${APP_STATE.employees.length} vouchers`, 'success');
             } catch(e) {
                 console.error(e);
             } finally {
@@ -1786,11 +1974,21 @@
 
             try {
                 const canvas = await html2canvas(summaryEl, {
-                    scale: 2,
+                    scale: 2.2,
                     useCORS: true,
                     allowTaint: true,
                     logging: false,
-                    backgroundColor: '#ffffff'
+                    backgroundColor: '#ffffff',
+                    windowWidth: 1024,
+                    onclone: function(clonedDoc) {
+                        const mCards = clonedDoc.getElementById('summaryMobileCardsContainer');
+                        if (mCards) mCards.style.display = 'none';
+                        const dTable = clonedDoc.querySelector('#summaryPrintArea > div:nth-child(2)');
+                        if (dTable) {
+                            dTable.style.display = 'block';
+                            dTable.classList.remove('hidden');
+                        }
+                    }
                 });
 
                 const imgData = canvas.toDataURL('image/jpeg', 0.98);
@@ -1799,11 +1997,12 @@
 
                 const pageWidth = 210;
                 const pageHeight = 297;
-                const margin = 5;
+                const margin = 6;
                 const targetWidth = pageWidth - (margin * 2);
                 const targetHeight = (canvas.height * targetWidth) / canvas.width;
+                const topMargin = Math.max(6, (pageHeight - targetHeight) / 2);
 
-                pdf.addImage(imgData, 'JPEG', margin, margin, targetWidth, Math.min(targetHeight, pageHeight - (margin * 2)));
+                pdf.addImage(imgData, 'JPEG', margin, topMargin, targetWidth, Math.min(targetHeight, pageHeight - 12));
                 pdf.save(fileName);
 
                 showToast(`Downloaded: ${fileName}`, 'success');

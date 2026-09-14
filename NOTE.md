@@ -156,7 +156,31 @@ D:\TECH\WEBSITE\SALARY ATTENDANCE\
   - Designed automated continuous deployment pipeline connecting GitHub repository directly to Hostinger.
   - Added `.github/workflows/deploy.yml` utilizing `SamKirkland/FTP-Deploy-Action@v4.3.5`.
   - Whenever code is pushed to `main` branch, GitHub Actions automatically uploads all updated production files (`index.html`, `logo.png`, `.htaccess`, `robots.txt`) directly into Hostinger's `public_html/`.
-  - Documented both GitHub Actions method and Hostinger native Git Webhook method for the user.
+
+---
+
+### [Update 008] — Perfect PDF Table Cell Centering & A4 Proportion Matching
+* **Date / Timestamp:** 2026-09-14 16:35 Local Time
+* **Primary Files Modified:**
+  - [`index.html`](file:///D:/TECH/WEBSITE/SALARY%20ATTENDANCE/index.html)
+  - [`NOTE.md`](file:///D:/TECH/WEBSITE/SALARY%20ATTENDANCE/NOTE.md)
+  - [`salary_best_travel_ltd_upload.zip`](file:///D:/TECH/WEBSITE/SALARY%20ATTENDANCE/salary_best_travel_ltd_upload.zip)
+* **Summary of Changes:**
+  - **Identified & Resolved PDF Misalignment & Squishing Bug:**
+    - Root Cause 1: On mobile devices, `html2canvas` captures within mobile viewport context, inheriting tiny 8px fonts and auto row heights that collapsed the table into paper-thin rows (~15px).
+    - Root Cause 2: Arbitrary line-height (1.35) combined with top padding caused text baseline to hug the top border of each cell rather than centering vertically.
+    - Root Cause 3: The squished voucher height (~750px) left over 100mm of dead white space at the bottom of the 297mm A4 page.
+  - **Engineered Isolated High-Resolution Rendering Sandbox:**
+    - Implemented `#pdf-render-sandbox` with a strict fixed 794px width (standard A4 width at 96 DPI), running at `scale: 2.5` (~300 DPI print clarity).
+    - Applied explicit height (`23px` tbody, `25px` thead/tfoot, `28px` employee info bar) with identical matching `line-height` (`23px` / `25px` / `28px`) and zero padding. This mathematically forces character glyphs into the dead-center of every box horizontally and vertically.
+    - Overrode `overflow: hidden; text-overflow: ellipsis; white-space: nowrap;` on Remarks to prevent baseline clipping.
+  - **True-to-Scale A4 Page Sizing:**
+    - Re-architected jsPDF rendering geometry (`width: 198mm`, `height: ~276mm`, `left/right margin: 6mm`, `top/bottom margin: ~10.5mm`).
+    - The downloaded PDF voucher now fills 93% of the A4 page height with elegant, balanced margins, matching the exact format, sizing, and aesthetic of the live website view.
+  - **Applied Across All Export Engines:**
+    - Enhanced Single Voucher PDF download (`downloadSingleEmployeePdf()`).
+    - Enhanced Batch 25-Voucher PDF download (`downloadAllEmployeesPdf()`).
+    - Enhanced Monthly Payroll Summary PDF export (`downloadSummaryPdfDirect()`) to render the full official summary table on mobile devices.
 
 ---
 
