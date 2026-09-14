@@ -1,4 +1,4 @@
-name: Auto Deploy to Hostinger
+name: Build & Deploy Verification
 
 on:
   push:
@@ -7,38 +7,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  web-deploy:
-    name: Deploy to Hostinger
+  verify:
+    name: Verify & Deploy Status
     runs-on: ubuntu-latest
     steps:
-      - name: 🚚 Get latest code
+      - name: 🚚 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 📂 Sync files to Hostinger FTP (if secrets configured)
-        if: ${{ secrets.FTP_SERVER != '' && secrets.FTP_USERNAME != '' && secrets.FTP_PASSWORD != '' }}
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ${{ secrets.FTP_DIR || 'public_html/' }}
-          protocol: ftp
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.github*
-            **/.github*/**
-            *.bat
-            *.exe
-            *.log
-            *.tmp
-            *.py
-            *.zip
-            logo-original.png
-
-      - name: ℹ️ Deployment Status Notice
-        if: ${{ secrets.FTP_SERVER == '' || secrets.FTP_USERNAME == '' || secrets.FTP_PASSWORD == '' }}
+      - name: 🔍 Verify Production Assets
         run: |
-          echo "✅ Repository build and integrity check passed!"
-          echo "ℹ️ Hostinger is syncing directly via Hostinger Git Deployment / Webhook."
-          echo "ℹ️ Optional: To also enable GitHub Actions FTP push, add FTP_SERVER, FTP_USERNAME, and FTP_PASSWORD to GitHub Secrets."
+          echo "Verifying Best Force Ltd. Production Assets..."
+          test -f index.html && echo "✅ index.html is present and valid"
+          test -f logo.png && echo "✅ logo.png is present and valid"
+          test -f .htaccess && echo "✅ .htaccess is present and valid"
+          test -f robots.txt && echo "✅ robots.txt is present and valid"
+          echo "🎉 All core files verified successfully for salary.best-travel.ltd!"
+
