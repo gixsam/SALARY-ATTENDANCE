@@ -1103,11 +1103,89 @@
             return { tm: diff, h: Math.floor(diff/60), m: diff%60, di: inT, do: outT };
         }
 
-        function getOffDayCredit(empId, d, tDays) {
-            const isWork = day => day>0 && day<=tDays && new Date(APP_STATE.currentYear, APP_STATE.currentMonth, day).getDay()!==5 && !APP_STATE.holidays[`${APP_STATE.currentYear}-${String(APP_STATE.currentMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`];
+        // ─────────────────────────────────────────────────────────────────────
+        // MONTH-BY-MONTH ISOLATION ENGINE (Update 014)
+        // Ensures advances, fines, duty hours & analytics are 100% strictly scoped per month
+        // ─────────────────────────────────────────────────────────────────────
+
+        function getEmpMonthData(emp, year, month) {
+            const y = year !== undefined ? year : APP_STATE.currentYear;
+            const m = month !== undefined ? month : APP_STATE.currentMonth;
+            const key = `${y}-${String(m + 1).padStart(2, '0')}`;
+            if (emp.monthly && emp.monthly[key]) {
+                return emp.monthly[key];
+            }
+            // For August 2026: fallback to initial factory-verified values
+            if (y === 2026 && m === 7) {
+                return {
+                    advance: emp.advance || 0,
+                    fine: emp.fine || 0,
+                    overrideDutyHours: emp.overrideDutyHours,
+                    overrideNet: emp.overrideNet,
+                    approvalNote: emp.approvalNote || 'Approved'
+                };
+            }
+            // For September 2026, October 2026 & future months: fresh start
+            return {
+                advance: 0,
+                fine: 0,
+                overrideDutyHours: undefined,
+                overrideNet: undefined,
+                approvalNote: 'Approved'
+            };
+        }
+
+        function setEmpMonthData(emp, year, month, updates) {
+            const y = year !== undefined ? year : APP_STATE.currentYear;
+            const m = month !== undefined ? month : APP_STATE.currentMonth;
+            const key = `${y}-${String(m + 1).padStart(2, '0')}`;
+            emp.monthly = emp.monthly || {};
+            emp.monthly[key] = Object.assign({}, getEmpMonthData(emp, y, m), updates);
+        }
+
+        function getEmpMonthDutyMinutes(empId, year, month) {
+            const y = year !== undefined ? year : APP_STATE.currentYear;
+            const m = month !== undefined ? month : APP_STATE.currentMonth;
+            const tDays = getDaysInMonth(y, m);
+            const pad = n => String(n).padStart(2, '0');
+            let tMin = 0, absentCount = 0;
+
+            for (let d = 1; d <= tDays; d++) {
+                const dateO = new Date(y, m, d);
+                const isF = dateO.getDay() === 5;
+                const iso = `${y}-${pad(m + 1)}-${pad(d)}`;
+                const hol = APP_STATE.holidays[iso];
+                const log = APP_STATE.attendanceLogs[`${empId}_${iso}`] || {};
+                const c = calcTime(log.inTime, log.outTime);
+
+                if (isF || hol) {
+                    if (log.forceHours !== undefined) {
+                        tMin += (log.forceHours * 60 + (log.forceMinutes || 0));
+                    } else {
+                        let cred = getOffDayCredit(empId, d, tDays, y, m);
+                        tMin += cred * 60;
+                    }
+                } else if (log.forceHours !== undefined) {
+                    tMin += (log.forceHours * 60 + (log.forceMinutes || 0));
+                    if (log.forceHours === 0 && (!log.forceMinutes || log.forceMinutes === 0) && !c.tm) {
+                        absentCount++;
+                    }
+                } else if (!log.inTime || !log.outTime || c.tm === 0) {
+                    absentCount++;
+                } else {
+                    tMin += c.tm;
+                }
+            }
+            return { tMin, tHrs: Math.floor(tMin / 60), rMin: tMin % 60, absentCount };
+        }
+
+        function getOffDayCredit(empId, d, tDays, yr, mo) {
+            const year = yr !== undefined ? yr : APP_STATE.currentYear;
+            const month = mo !== undefined ? mo : APP_STATE.currentMonth;
+            const isWork = day => day>0 && day<=tDays && new Date(year, month, day).getDay()!==5 && !APP_STATE.holidays[`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`];
             const isPres = day => {
                 if(!isWork(day)) return false;
-                let log = APP_STATE.attendanceLogs[`${empId}_${APP_STATE.currentYear}-${String(APP_STATE.currentMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`];
+                let log = APP_STATE.attendanceLogs[`${empId}_${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`];
                 return log && (calcTime(log.inTime, log.outTime).tm > 0 || (log.forceHours && log.forceHours > 0));
             };
             let pr = d-1, nx = d+1;
@@ -1176,15 +1254,16 @@
                 </tr>`;
             }
 
+            const monthData = getEmpMonthData(emp, APP_STATE.currentYear, APP_STATE.currentMonth);
             let tHrs = Math.floor(tMin/60), rMin = tMin%60;
-            if (emp.overrideDutyHours) {
-                tHrs = Math.floor(emp.overrideDutyHours);
-                rMin = Math.round((emp.overrideDutyHours - tHrs) * 60);
+            if (monthData.overrideDutyHours !== undefined) {
+                tHrs = Math.floor(monthData.overrideDutyHours);
+                rMin = Math.round((monthData.overrideDutyHours - tHrs) * 60);
             }
 
-            const adv = emp.advance || 0;
-            const fn = emp.fine || 0;
-            const net = emp.overrideNet !== undefined ? emp.overrideNet : Math.max(0, Math.round((tHrs + rMin/60) * (emp.basicSalary / 248)) - adv - fn);
+            const adv = monthData.advance || 0;
+            const fn = monthData.fine || 0;
+            const net = monthData.overrideNet !== undefined ? monthData.overrideNet : Math.max(0, Math.round((tHrs + rMin/60) * (emp.basicSalary / 248)) - adv - fn);
             const logoSrc = APP_STATE.customLogoUrl || 'logo.png';
 
             con.innerHTML = `
@@ -1299,14 +1378,19 @@
             let totalBase = 0, totalAdv = 0, totalFine = 0, totalNet = 0, totalMinutes = 0;
 
             APP_STATE.employees.forEach(emp => {
-                let tHrs = 248, rMin = 0;
-                if (emp.overrideDutyHours) {
-                    tHrs = Math.floor(emp.overrideDutyHours);
-                    rMin = Math.round((emp.overrideDutyHours - tHrs) * 60);
+                const mData = getEmpMonthData(emp, APP_STATE.currentYear, APP_STATE.currentMonth);
+                let tHrs = 0, rMin = 0;
+                if (mData.overrideDutyHours !== undefined) {
+                    tHrs = Math.floor(mData.overrideDutyHours);
+                    rMin = Math.round((mData.overrideDutyHours - tHrs) * 60);
+                } else {
+                    const duty = getEmpMonthDutyMinutes(emp.id, APP_STATE.currentYear, APP_STATE.currentMonth);
+                    tHrs = duty.tHrs;
+                    rMin = duty.rMin;
                 }
-                const adv = emp.advance || 0;
-                const fn = emp.fine || 0;
-                const net = emp.overrideNet !== undefined ? emp.overrideNet : Math.max(0, Math.round((tHrs + rMin/60) * (emp.basicSalary / 248)) - adv - fn);
+                const adv = mData.advance || 0;
+                const fn = mData.fine || 0;
+                const net = mData.overrideNet !== undefined ? mData.overrideNet : Math.max(0, Math.round((tHrs + rMin/60) * (emp.basicSalary / 248)) - adv - fn);
 
                 totalBase += emp.basicSalary;
                 totalAdv += adv;
@@ -1335,10 +1419,11 @@
             document.getElementById('editModalEmpName').textContent = emp.name;
             document.getElementById('editModalEmpDept').textContent = emp.dept || 'Staff';
 
+            const mData = getEmpMonthData(emp, APP_STATE.currentYear, APP_STATE.currentMonth);
             document.getElementById('editVoucherBaseSalary').value = emp.basicSalary || 0;
-            document.getElementById('editVoucherAdvance').value = emp.advance !== undefined ? emp.advance : 0;
-            document.getElementById('editVoucherFine').value = emp.fine !== undefined ? emp.fine : 0;
-            document.getElementById('editVoucherNote').value = emp.approvalNote || '';
+            document.getElementById('editVoucherAdvance').value = mData.advance !== undefined ? mData.advance : 0;
+            document.getElementById('editVoucherFine').value = mData.fine !== undefined ? mData.fine : 0;
+            document.getElementById('editVoucherNote').value = mData.approvalNote || '';
 
             let tHrs = 248, rMin = 0;
             if (emp.overrideDutyHours) {
@@ -1432,13 +1517,19 @@
             if (!emp) return;
 
             emp.basicSalary = parseFloat(document.getElementById('editVoucherBaseSalary').value) || 0;
-            emp.advance = parseFloat(document.getElementById('editVoucherAdvance').value) || 0;
-            emp.fine = parseFloat(document.getElementById('editVoucherFine').value) || 0;
-            emp.approvalNote = document.getElementById('editVoucherNote').value.trim() || 'Approved';
+            const adv = parseFloat(document.getElementById('editVoucherAdvance').value) || 0;
+            const fn = parseFloat(document.getElementById('editVoucherFine').value) || 0;
+            const note = document.getElementById('editVoucherNote').value.trim() || 'Approved';
+
+            setEmpMonthData(emp, APP_STATE.currentYear, APP_STATE.currentMonth, {
+                advance: adv,
+                fine: fn,
+                approvalNote: note
+            });
 
             closeModal('voucherEditModal');
             updateCalculationsAndTables();
-            showToast(`Updated voucher for ${emp.name}`, 'success');
+            showToast(`Updated voucher for ${emp.name} (${MONTH_NAMES[APP_STATE.currentMonth]} ${APP_STATE.currentYear})`, 'success');
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -1674,14 +1765,19 @@
             let gBase = 0, gMin = 0, gAdv = 0, gFine = 0, gNet = 0;
 
             APP_STATE.employees.forEach(emp => {
-                let tHrs = 248, rMin = 0;
-                if (emp.overrideDutyHours) {
-                    tHrs = Math.floor(emp.overrideDutyHours);
-                    rMin = Math.round((emp.overrideDutyHours - tHrs) * 60);
+                const mData = getEmpMonthData(emp, APP_STATE.currentYear, APP_STATE.currentMonth);
+                let tHrs = 0, rMin = 0;
+                if (mData.overrideDutyHours !== undefined) {
+                    tHrs = Math.floor(mData.overrideDutyHours);
+                    rMin = Math.round((mData.overrideDutyHours - tHrs) * 60);
+                } else {
+                    const duty = getEmpMonthDutyMinutes(emp.id, APP_STATE.currentYear, APP_STATE.currentMonth);
+                    tHrs = duty.tHrs;
+                    rMin = duty.rMin;
                 }
-                const adv = emp.advance || 0;
-                const fn = emp.fine || 0;
-                const net = emp.overrideNet !== undefined ? emp.overrideNet : Math.max(0, Math.round((tHrs + rMin/60) * (emp.basicSalary / 248)) - adv - fn);
+                const adv = mData.advance || 0;
+                const fn = mData.fine || 0;
+                const net = mData.overrideNet !== undefined ? mData.overrideNet : Math.max(0, Math.round((tHrs + rMin/60) * (emp.basicSalary / 248)) - adv - fn);
 
                 gBase += emp.basicSalary;
                 gMin += (tHrs * 60 + rMin);
@@ -2437,18 +2533,21 @@
                     }
                 }
 
+                const mData = getEmpMonthData(emp, APP_STATE.currentYear, APP_STATE.currentMonth);
                 let tHrs = Math.floor(tMin/60), rMin = tMin%60;
-                if (emp.overrideDutyHours) {
-                    tHrs = Math.floor(emp.overrideDutyHours);
-                    rMin = Math.round((emp.overrideDutyHours - tHrs) * 60);
+                if (mData.overrideDutyHours !== undefined) {
+                    tHrs = Math.floor(mData.overrideDutyHours);
+                    rMin = Math.round((mData.overrideDutyHours - tHrs) * 60);
                 }
-                const net = emp.overrideNet !== undefined ? emp.overrideNet : Math.max(0, Math.round((tHrs + rMin/60) * (emp.basicSalary / 248)) - (emp.advance||0) - (emp.fine||0));
+                const adv = mData.advance || 0;
+                const fn = mData.fine || 0;
+                const net = mData.overrideNet !== undefined ? mData.overrideNet : Math.max(0, Math.round((tHrs + rMin/60) * (emp.basicSalary / 248)) - adv - fn);
 
                 data.push(["Total:", "", "", tHrs, rMin, "", ""]);
                 data.push([]);
                 data.push(["Total Duty:", `${tHrs}h ${rMin}m`, "", "Basic Salary:", emp.basicSalary]);
-                data.push(["Advance:", emp.advance||0, "", "Approval Status:", emp.approvalNote||"Approved"]);
-                data.push(["Fine:", emp.fine||0, "", "NET PAYABLE:", net]);
+                data.push(["Advance:", adv, "", "Approval Status:", mData.approvalNote || "Approved"]);
+                data.push(["Fine:", fn, "", "NET PAYABLE:", net]);
 
                 const ws = XLSX.utils.aoa_to_sheet(data);
                 XLSX.utils.book_append_sheet(wb, ws, `${emp.id}-${emp.name.split(' ')[0]}`.substring(0,30));

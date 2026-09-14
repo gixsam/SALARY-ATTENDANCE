@@ -15,6 +15,33 @@
 
 ---
 
+## [Update 014] — Strict Month-by-Month Data Isolation & Dynamic KPI Analytics (2026-09-14)
+**Type:** Core Financial & Architectural Refactor — Monthly Scoping  
+**Status:** ✅ COMPLETED
+
+### User Question & Context
+The user uploaded photos of September attendance on the website and the exported Excel sheet for staff `4511 (Ahad Mridah)`, asking:
+1. When staff names differ or are abbreviated in ZKTeco, how does the system match? (Confirmed: Employee ID `4511` is the absolute master key).
+2. When September salary is paid in October, will September's advances, fines, duty hours, and analytics get added together into October, OR will each month show ONLY its own totals?
+
+### Solution & Changes
+1. **Strict Month-by-Month Scoping (`getEmpMonthData`, `setEmpMonthData`)**:
+   - Advances, fines, approval notes, and duty overrides are now isolated per month (`year-month` key).
+   - **August 2026**: Preserves the official August audit figures (Total Advance ৳ 11,000, approved overrides).
+   - **September 2026 & Future Months**: Starts fresh! Advances and fines for September belong ONLY to September. When switching to October, October starts with `৳ 0` advance and `৳ 0` fine unless specifically entered for October.
+   - September and October numbers are **NEVER mixed or lumped together**.
+2. **Dynamic Monthly Duty Hours (`getEmpMonthDutyMinutes`)**:
+   - Calculates duty hours dynamically from that specific month's attendance logs (instead of carrying over August's 248h override into September).
+3. **Dynamic Top KPI Analytics Dashboard (`updateAnalyticsDashboard`)**:
+   - The top analytics bar (Total Base, Total Advance, Total Fine, Total Net Pay, Total Duty) now dynamically reflects the **currently selected month**!
+   - In September, it shows September's totals. In October, it shows October's totals.
+4. **Voucher Edit Modal (`saveVoucherAdjustments`)**:
+   - Adjustments to advance, fine, or notes are stored strictly for the active month.
+
+**Files Modified:** `index.html` (Helper functions, KPI analytics, A4 calculations, modal handlers, Excel export)
+
+---
+
 ## [Update 013] — Native ZKTeco "Total Time Card" Parser & Direct Excel Upload (2026-09-14)
 **Type:** Core Feature Enhancement — Biometric Data Ingestion & Auto Month Detection  
 **Status:** ✅ COMPLETED
