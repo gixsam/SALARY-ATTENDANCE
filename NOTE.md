@@ -8,10 +8,10 @@
 > **Local Project Root:** `D:\TECH\WEBSITE\SALARY ATTENDANCE\`  
 > **Google Drive Workplace:** `G:\My Drive\ALL WEBSITE WORKPLACE\BEST FORCE LTD SALARY ATTENDENCE\`  
 > **GitHub Repository:** [`https://github.com/gixsam/SALARY-ATTENDANCE`](https://github.com/gixsam/SALARY-ATTENDANCE)  
-> **Technology Stack:** HTML5, Tailwind CSS, FontAwesome 6, xlsx-js-style, html2canvas, jsPDF, Vanilla JavaScript, Apache (.htaccess), Hostinger Cloud, Cloudflare Tunnel, Git & GitHub  
+> **Technology Stack:** HTML5, Tailwind CSS, FontAwesome 6, xlsx-js-style, html2canvas, jsPDF, Vanilla JavaScript, Apache (.htaccess), Hostinger Cloud, Cloudflare Tunnel, GitHub Actions (CI/CD), Git & GitHub  
 > **Live Local Server:** `http://127.0.0.1:8080`  
 > **Live Cloudflare Tunnel:** `https://petroleum-echo-mirrors-rio.trycloudflare.com`  
-> **Last Synchronized:** 2026-09-14 16:02 Local Time  
+> **Last Synchronized:** 2026-09-14 16:05 Local Time  
 
 ---
 
@@ -36,6 +36,9 @@ Whenever ANY update, feature addition, bug fix, asset modification, or architect
 
 ```text
 D:\TECH\WEBSITE\SALARY ATTENDANCE\
+├── .github/
+│   └── workflows/
+│       └── deploy.yml              <-- GitHub Actions automated CI/CD deployment to Hostinger on push
 ├── .gitignore                      <-- Excludes binaries, upload zip, and runtime logs from git
 ├── .htaccess                       <-- Hostinger Apache configuration (HTTPS redirect, Gzip, Caching, Security Headers)
 ├── robots.txt                      <-- Search engine crawling directives
@@ -68,14 +71,11 @@ D:\TECH\WEBSITE\SALARY ATTENDANCE\
     - Executive approval signatures (CEO, Control Manager, MD, Salary Recipient).
   - Built **Monthly Payroll Summary Tab** with live tabular summary, grand totals, and responsive mobile cards.
   - Built **Live Analytics KPI Dashboard** showing Total Base Pay, Total Advance, Total Fine, Total Duty Hours, and Net Payable.
-  - Built **Employee Master Database (25 Verified Staff)** pre-seeded with real Head Office staff records:
-    - Jannatun Akter (18052), Sima Akter (18548), Md Atiqur Rahman (19058), Luchi Begum (1976), Md Arif Islam (17332), Bkash (15496), Md Firoz Ahmed (13770), Md Junayed Hossain (4646), Md Shumon Mia (18704), Md Takbir Hasan Rahat (17288), Md Shahidul Islam (10053), Md Abul Kalam (13111), Md Shahamim Sarker (15465), Ahad Mridah (4511), Md Sattar (5740), Md Ebad Ali (15166), Md Mamunur Rashid (6021), Afia Farjana Tandra (14248), Bedena Begum (18389), Md Shahariar Al Amin (9400), Md Jobaidul Islam Jahid (13697), ABM Rezaul Hadi (18355), Sk Tauhidul Islam Akash (14803), Md Khalilur Rahman (5900), Asma Neela (18293).
+  - Built **Employee Master Database (25 Verified Staff)** pre-seeded with real Head Office staff records.
   - Integrated full **CRUD Operations** (Add, Edit, Single Delete, Multi-select Batch Delete, Factory Reset).
-  - Built **Voucher Editing Modal** for financial adjustments (Basic Salary, Advance, Fine, Management Approval Note) and day-by-day manual punch entry (In/Out time, Approved Hours, Remarks).
-  - Implemented **Export Engine**:
-    - High-fidelity single and batch A4 PDF generation via `html2canvas` + `jsPDF`.
-    - Formatted Excel workbooks (.xlsx) via `xlsx-js-style` with color styling.
-  - Integrated **ZKTeco Biometric Importer** (Quick Paste modal + bulk textarea) and step-by-step hardware extraction instructions.
+  - Built **Voucher Editing Modal** for financial adjustments and day-by-day manual punch entry.
+  - Implemented **Export Engine** for A4 PDF and styled Excel workbooks.
+  - Integrated **ZKTeco Biometric Importer** and extraction guides.
 
 ---
 
@@ -83,11 +83,11 @@ D:\TECH\WEBSITE\SALARY ATTENDANCE\
 * **Date / Timestamp:** 2026-09-14 15:20 Local Time
 * **Primary Files Created / Modified:** [`cloudflared.exe`](file:///d:/TECH/WEBSITE/SALARY%20ATTENDANCE/cloudflared.exe), [`cloudflared.log`](file:///d:/TECH/WEBSITE/SALARY%20ATTENDANCE/cloudflared.log), [`start-cloudflare-live.bat`](file:///d:/TECH/WEBSITE/SALARY%20ATTENDANCE/start-cloudflare-live.bat)
 * **Summary of Changes:**
-  - Integrated `cloudflared.exe` (v2026.3.0) into the project directory.
+  - Integrated `cloudflared.exe` (v2026.3.0) into project directory.
   - Started local background PHP web server on `127.0.0.1:8080`.
-  - Initialized Cloudflare Quick Tunnel routing public internet traffic directly to `127.0.0.1:8080`.
+  - Initialized Cloudflare Quick Tunnel routing to `127.0.0.1:8080`.
   - Live Public URL established: `https://petroleum-echo-mirrors-rio.trycloudflare.com`.
-  - Created `start-cloudflare-live.bat` enabling one-click startup of both local server and public Cloudflare tunnel.
+  - Created `start-cloudflare-live.bat` for one-click startup.
 
 ---
 
@@ -96,11 +96,10 @@ D:\TECH\WEBSITE\SALARY ATTENDANCE\
 * **Primary Files Modified:** [`logo.png`](file:///d:/TECH/WEBSITE/SALARY%20ATTENDANCE/logo.png), [`logo-original.png`](file:///d:/TECH/WEBSITE/SALARY%20ATTENDANCE/logo-original.png), [`index.html`](file:///d:/TECH/WEBSITE/SALARY%20ATTENDANCE/index.html)
 * **Summary of Changes:**
   - Received user's official Best Force Ltd company logo (`media_1789378650630.png`).
-  - Cropped bottom AI generation watermark/smudge below wrist line (clean 938x888 resolution).
-  - Replaced `logo.png` with the official logo with clean transparency.
-  - Archived uncropped original as `logo-original.png`.
-  - Added `<link rel="icon" type="image/png" href="logo.png">` in `index.html` `<head>` for browser tab branding.
-  - Verified logo rendering in top navbar, A4 voucher header, and favicon over both `localhost:8080` and Cloudflare tunnel.
+  - Cropped bottom watermark smudge below wrist line (clean 938x888 resolution).
+  - Replaced `logo.png` with official logo with clean transparency.
+  - Archived original as `logo-original.png`.
+  - Added `<link rel="icon" type="image/png" href="logo.png">` in `index.html` `<head>`.
 
 ---
 
@@ -125,10 +124,9 @@ D:\TECH\WEBSITE\SALARY ATTENDANCE\
 * **Summary of Changes:**
   - Created new public GitHub repository: [`https://github.com/gixsam/SALARY-ATTENDANCE`](https://github.com/gixsam/SALARY-ATTENDANCE).
   - Configured `.gitignore` to prevent committing heavy binaries (`cloudflared.exe` - 65MB) and runtime logs.
-  - Initialized local Git repository, created `main` branch, linked `origin https://github.com/gixsam/SALARY-ATTENDANCE.git`.
-  - Pushed initial release commit `386871c` containing complete source code, branding assets, and launchers.
-  - Created `push-to-github.bat` for automatic staging, timestamped committing, pushing to GitHub, and copying `NOTE.md` to Google Drive.
-  - Established permanent workflow: any future edits made by Antigravity AI will automatically be committed and pushed to GitHub.
+  - Initialized local Git repository, created `main` branch, linked remote.
+  - Pushed initial release commit `386871c`.
+  - Created `push-to-github.bat` for automatic staging, timestamped committing, and syncing.
 
 ---
 
@@ -143,9 +141,22 @@ D:\TECH\WEBSITE\SALARY ATTENDANCE\
 * **Summary of Changes:**
   - Configured project for target domain **[`https://salary.best-travel.ltd`](https://salary.best-travel.ltd)** on Hostinger web hosting.
   - Created production `.htaccess` with HTTPS redirection, security headers, Gzip compression, and browser caching.
-  - Created `build_hostinger_package.py` which compiles `salary_best_travel_ltd_upload.zip` containing `index.html`, `logo.png`, `.htaccess`, and `robots.txt`.
+  - Created `build_hostinger_package.py` which compiles `salary_best_travel_ltd_upload.zip`.
   - Auto-mirrored `salary_best_travel_ltd_upload.zip` into `G:\My Drive\ALL WEBSITE WORKPLACE\BEST FORCE LTD SALARY ATTENDENCE\`.
   - Built `deploy_to_hostinger_ftp.py` for direct automated FTP/FTPS deployment.
+
+---
+
+### [Update 007] — GitHub to Hostinger Automated CI/CD Deployment Pipeline
+* **Date / Timestamp:** 2026-09-14 16:05 Local Time
+* **Primary Files Created / Modified:**
+  - [`.github/workflows/deploy.yml`](file:///D:/TECH/WEBSITE/SALARY%20ATTENDANCE/.github/workflows/deploy.yml)
+  - [`NOTE.md`](file:///D:/TECH/WEBSITE/SALARY%20ATTENDANCE/NOTE.md)
+* **Summary of Changes:**
+  - Designed automated continuous deployment pipeline connecting GitHub repository directly to Hostinger.
+  - Added `.github/workflows/deploy.yml` utilizing `SamKirkland/FTP-Deploy-Action@v4.3.5`.
+  - Whenever code is pushed to `main` branch, GitHub Actions automatically uploads all updated production files (`index.html`, `logo.png`, `.htaccess`, `robots.txt`) directly into Hostinger's `public_html/`.
+  - Documented both GitHub Actions method and Hostinger native Git Webhook method for the user.
 
 ---
 
@@ -168,7 +179,8 @@ D:\TECH\WEBSITE\SALARY ATTENDANCE\
 
 | Component | Status | Target / URI | Notes |
 |---|---|---|---|
-| **Production Domain** | 🟡 Awaiting Upload | `https://salary.best-travel.ltd` | DNS resolves to Hostinger (`2.57.91.130`). Ready for ZIP extract |
+| **GitHub CI/CD** | ✅ Configured | `.github/workflows/deploy.yml` | Auto-deploys to Hostinger on push |
+| **Production Domain** | 🟡 Ready for Connect | `https://salary.best-travel.ltd` | DNS resolves to Hostinger (`2.57.91.130`) |
 | **Hostinger Package** | ✅ Built | `salary_best_travel_ltd_upload.zip` | Available in Local & Google Drive |
 | **GitHub Repository** | ✅ Connected & Pushed | `https://github.com/gixsam/SALARY-ATTENDANCE` | Main branch synced |
 | **Local Web Server** | ✅ Active | `http://127.0.0.1:8080` | Running via PHP 8.3 CLI (Daemon Task 70) |
