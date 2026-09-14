@@ -5,10 +5,11 @@
 > **Company:** Best Force Ltd. (Best Outsourcing — Head Office)  
 > **Local Project Root:** `D:\TECH\WEBSITE\SALARY ATTENDANCE\`  
 > **Google Drive Workplace:** `G:\My Drive\ALL WEBSITE WORKPLACE\BEST FORCE LTD SALARY ATTENDENCE\`  
-> **Technology Stack:** HTML5, Tailwind CSS, FontAwesome 6, xlsx-js-style, html2canvas, jsPDF, Vanilla JavaScript, PHP Built-in Server, Cloudflare Tunnel (`cloudflared`)  
+> **GitHub Repository:** [`https://github.com/gixsam/SALARY-ATTENDANCE`](https://github.com/gixsam/SALARY-ATTENDANCE)  
+> **Technology Stack:** HTML5, Tailwind CSS, FontAwesome 6, xlsx-js-style, html2canvas, jsPDF, Vanilla JavaScript, PHP Built-in Server, Cloudflare Tunnel (`cloudflared`), Git & GitHub  
 > **Live Local Server:** `http://127.0.0.1:8080`  
 > **Live Cloudflare Tunnel:** `https://petroleum-echo-mirrors-rio.trycloudflare.com`  
-> **Last Synchronized:** 2026-09-14 15:50 Local Time  
+> **Last Synchronized:** 2026-09-14 15:55 Local Time  
 
 ---
 
@@ -22,6 +23,8 @@ Whenever ANY update, feature addition, bug fix, asset modification, or architect
 2. **Synchronize this file to BOTH locations immediately**:
    - **Local Project Root:** `D:\TECH\WEBSITE\SALARY ATTENDANCE\NOTE.md`
    - **Google Drive Storage:** `G:\My Drive\ALL WEBSITE WORKPLACE\BEST FORCE LTD SALARY ATTENDENCE\NOTE.md`
+3. **Commit & Push to GitHub Repository automatically**:
+   - Push to `origin main` at `https://github.com/gixsam/SALARY-ATTENDANCE`
 
 ---
 
@@ -29,14 +32,16 @@ Whenever ANY update, feature addition, bug fix, asset modification, or architect
 
 ```text
 D:\TECH\WEBSITE\SALARY ATTENDANCE\
+├── .gitignore                      <-- Excludes binaries (cloudflared.exe) and runtime logs
 ├── NOTE.md                         <-- Master project log & changelog (This file)
 ├── index.html                      <-- Complete Single-Page Application (Attendance Voucher, Payroll, Analytics, Modals)
 ├── logo.png                        <-- Official Best Force Ltd. company logo (cropped, clean transparent PNG)
 ├── logo-original.png               <-- Uncropped original uploaded logo asset
-├── cloudflared.exe                 <-- Cloudflare Tunnel agent (v2026.3.0) for public live sharing
-├── cloudflared.log                 <-- Runtime log file recording active tunnel connection and URLs
+├── cloudflared.exe                 <-- Cloudflare Tunnel agent (v2026.3.0) for public live sharing [Ignored in git]
+├── cloudflared.log                 <-- Runtime log file recording active tunnel connection and URLs [Ignored in git]
 ├── start-server.bat                <-- One-click batch launcher for local PHP server (http://localhost:8080)
-└── start-cloudflare-live.bat       <-- One-click batch launcher for both local PHP server and Cloudflare Live Tunnel
+├── start-cloudflare-live.bat       <-- One-click batch launcher for both local PHP server and Cloudflare Live Tunnel
+└── push-to-github.bat              <-- One-click manual script to stage, commit, push to GitHub & sync Google Drive
 ```
 
 ---
@@ -102,6 +107,22 @@ D:\TECH\WEBSITE\SALARY ATTENDANCE\
 
 ---
 
+### [Update 005] — GitHub Remote Repository Integration & Continuous Sync Pipeline
+* **Date / Timestamp:** 2026-09-14 15:54 Local Time
+* **Primary Files Created / Modified:**
+  - [`.gitignore`](file:///D:/TECH/WEBSITE/SALARY%20ATTENDANCE/.gitignore)
+  - [`push-to-github.bat`](file:///D:/TECH/WEBSITE/SALARY%20ATTENDANCE/push-to-github.bat)
+  - [`NOTE.md`](file:///D:/TECH/WEBSITE/SALARY%20ATTENDANCE/NOTE.md)
+* **Summary of Changes:**
+  - Created new public GitHub repository: [`https://github.com/gixsam/SALARY-ATTENDANCE`](https://github.com/gixsam/SALARY-ATTENDANCE).
+  - Configured `.gitignore` to prevent committing heavy binaries (`cloudflared.exe` - 65MB) and runtime logs.
+  - Initialized local Git repository, created `main` branch, linked `origin https://github.com/gixsam/SALARY-ATTENDANCE.git`.
+  - Pushed initial release commit `386871c` containing complete source code, branding assets, and launchers.
+  - Created `push-to-github.bat` for automatic staging, timestamped committing, pushing to GitHub, and copying `NOTE.md` to Google Drive.
+  - Established permanent workflow: any future edits made by Antigravity AI will automatically be committed and pushed to GitHub.
+
+---
+
 ## 🔮 4. Future Roadmap & Planned Upgrades
 
 1. **Automated SQLite / MySQL Persistence Layer:**
@@ -121,6 +142,7 @@ D:\TECH\WEBSITE\SALARY ATTENDANCE\
 
 | Component | Status | Target / URI | Notes |
 |---|---|---|---|
+| **GitHub Repository** | ✅ Connected & Pushed | `https://github.com/gixsam/SALARY-ATTENDANCE` | Main branch synced with commit `386871c` |
 | **Local Web Server** | ✅ Active | `http://127.0.0.1:8080` | Running via PHP 8.3 CLI (Daemon Task 70) |
 | **Cloudflare Tunnel** | ✅ Active | `https://petroleum-echo-mirrors-rio.trycloudflare.com` | Verified HTTP 200 via `cloudflared` (Daemon Task 78) |
 | **Company Logo** | ✅ Active | `logo.png` | Official high-res logo with transparent background & favicon |
