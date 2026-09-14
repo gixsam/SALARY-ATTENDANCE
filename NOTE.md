@@ -15,6 +15,40 @@
 
 ---
 
+## [Update 015] — High-Contrast Visual & CSS Overhaul (2026-09-15)
+**Type:** Major UI/UX & CSS Modernization — High-Contrast Executive Dashboard  
+**Status:** ✅ COMPLETED
+
+### User Request & Problem
+The user uploaded a mobile screenshot (`media_1789412878449.jpg`) requesting:
+*"NEED TO MAKE THE ‘UI AND CSS VISUAL MORE HIGH-LIGHTED. IF YOU NEED YOU MAKE THE FRONTEND BY ‘GOOGLE STITCH’."*
+The previous UI appeared muted, flat, and washed out on mobile devices, with faint card borders, small plain text, and low-contrast status pills.
+
+### Solution & Changes
+1. **High-Impact 3D KPI Analytics Cards:**
+   - Redesigned all 5 top metrics cards with colored top accent borders (Indigo, Amber, Rose, Sky) and elevated drop-shadows.
+   - Replaced pale icon squares with rich, glowing gradient badges (`from-indigo-500 to-indigo-700`, `from-amber-500 to-orange-600`, etc.).
+   - Elevated **Net Payable** banner with pulsating live emerald indicator, deep gradient backdrop, and high-visibility typography.
+2. **Executive Top Header & Navigation Bar:**
+   - Metallic gold-accented Month/Year dropdown pill with glowing amber border.
+   - Glowing emerald action button for "Paste Log" with subtle neon glow.
+   - Illuminated active navigation tab pills with subtle scale and shadow.
+3. **High-Contrast Mobile Staff Cards (`summaryMobileCardsContainer` & `employeeMobileCardsContainer`):**
+   - Added a bold left accent bar (`border-l-4 border-l-indigo-600`).
+   - Deep indigo ID badge (`bg-indigo-700 text-white font-mono font-black`).
+   - Bold high-contrast staff names and distinct department pill badges.
+   - Replaced flat gray chips with 3 dedicated, styled micro-chips: Duty (soft indigo), Advance (soft amber), and Note (soft slate).
+   - Upgraded **Net Payable** into a vibrant, high-contrast Emerald gradient badge.
+4. **Desktop Summary Table & Action Bars:**
+   - High-gloss gradient buttons for **Download Excel** (emerald) and **Download PDF** (rose/crimson).
+   - High-contrast table headers, zebra-striping with hover glow, and illuminated totals footer.
+5. **PDF & Print Preservation:**
+   - Strict preservation of the internal `.a4-voucher-box` and `.voucher-table` layout to guarantee 100% pixel-perfect PDF downloads.
+
+**Files Modified:** `index.html` (CSS styles, Top header, KPI cards, Action bars, Tab switching, Mobile card templates, Desktop table rows)
+
+---
+
 ## [Update 014] — Strict Month-by-Month Data Isolation & Dynamic KPI Analytics (2026-09-14)
 **Type:** Core Financial & Architectural Refactor — Monthly Scoping  
 **Status:** ✅ COMPLETED
