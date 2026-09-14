@@ -1,6 +1,7 @@
 # Binaries and executables
 cloudflared.exe
 *.exe
+*.zip
 
 # Logs
 cloudflared.log

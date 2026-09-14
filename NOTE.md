@@ -3,13 +3,15 @@
 
 > **Project Name:** Best Force Ltd. - Salary Attendance & Payroll System  
 > **Company:** Best Force Ltd. (Best Outsourcing — Head Office)  
+> **Production Domain:** [`https://salary.best-travel.ltd`](https://salary.best-travel.ltd)  
+> **Hostinger Target Directory:** `public_html/` (Subdomain root for `salary.best-travel.ltd`)  
 > **Local Project Root:** `D:\TECH\WEBSITE\SALARY ATTENDANCE\`  
 > **Google Drive Workplace:** `G:\My Drive\ALL WEBSITE WORKPLACE\BEST FORCE LTD SALARY ATTENDENCE\`  
 > **GitHub Repository:** [`https://github.com/gixsam/SALARY-ATTENDANCE`](https://github.com/gixsam/SALARY-ATTENDANCE)  
-> **Technology Stack:** HTML5, Tailwind CSS, FontAwesome 6, xlsx-js-style, html2canvas, jsPDF, Vanilla JavaScript, PHP Built-in Server, Cloudflare Tunnel (`cloudflared`), Git & GitHub  
+> **Technology Stack:** HTML5, Tailwind CSS, FontAwesome 6, xlsx-js-style, html2canvas, jsPDF, Vanilla JavaScript, Apache (.htaccess), Hostinger Cloud, Cloudflare Tunnel, Git & GitHub  
 > **Live Local Server:** `http://127.0.0.1:8080`  
 > **Live Cloudflare Tunnel:** `https://petroleum-echo-mirrors-rio.trycloudflare.com`  
-> **Last Synchronized:** 2026-09-14 15:55 Local Time  
+> **Last Synchronized:** 2026-09-14 16:02 Local Time  
 
 ---
 
@@ -25,6 +27,8 @@ Whenever ANY update, feature addition, bug fix, asset modification, or architect
    - **Google Drive Storage:** `G:\My Drive\ALL WEBSITE WORKPLACE\BEST FORCE LTD SALARY ATTENDENCE\NOTE.md`
 3. **Commit & Push to GitHub Repository automatically**:
    - Push to `origin main` at `https://github.com/gixsam/SALARY-ATTENDANCE`
+4. **Rebuild Hostinger Upload Package**:
+   - Run `build_hostinger_package.py` to regenerate `salary_best_travel_ltd_upload.zip` in both Local and Google Drive folders.
 
 ---
 
@@ -32,11 +36,16 @@ Whenever ANY update, feature addition, bug fix, asset modification, or architect
 
 ```text
 D:\TECH\WEBSITE\SALARY ATTENDANCE\
-├── .gitignore                      <-- Excludes binaries (cloudflared.exe) and runtime logs
+├── .gitignore                      <-- Excludes binaries, upload zip, and runtime logs from git
+├── .htaccess                       <-- Hostinger Apache configuration (HTTPS redirect, Gzip, Caching, Security Headers)
+├── robots.txt                      <-- Search engine crawling directives
 ├── NOTE.md                         <-- Master project log & changelog (This file)
 ├── index.html                      <-- Complete Single-Page Application (Attendance Voucher, Payroll, Analytics, Modals)
 ├── logo.png                        <-- Official Best Force Ltd. company logo (cropped, clean transparent PNG)
 ├── logo-original.png               <-- Uncropped original uploaded logo asset
+├── salary_best_travel_ltd_upload.zip <-- Production package ready for Hostinger File Manager upload & extract
+├── build_hostinger_package.py      <-- Automation script to bundle production zip & mirror to Google Drive
+├── deploy_to_hostinger_ftp.py      <-- Direct FTP / FTPS deployment engine to push updates to Hostinger
 ├── cloudflared.exe                 <-- Cloudflare Tunnel agent (v2026.3.0) for public live sharing [Ignored in git]
 ├── cloudflared.log                 <-- Runtime log file recording active tunnel connection and URLs [Ignored in git]
 ├── start-server.bat                <-- One-click batch launcher for local PHP server (http://localhost:8080)
@@ -123,6 +132,23 @@ D:\TECH\WEBSITE\SALARY ATTENDANCE\
 
 ---
 
+### [Update 006] — Hostinger Domain Setup (`salary.best-travel.ltd`) & Deployment Package Engine
+* **Date / Timestamp:** 2026-09-14 16:02 Local Time
+* **Primary Files Created / Modified:**
+  - [`.htaccess`](file:///D:/TECH/WEBSITE/SALARY%20ATTENDANCE/.htaccess)
+  - [`robots.txt`](file:///D:/TECH/WEBSITE/SALARY%20ATTENDANCE/robots.txt)
+  - [`build_hostinger_package.py`](file:///D:/TECH/WEBSITE/SALARY%20ATTENDANCE/build_hostinger_package.py)
+  - [`deploy_to_hostinger_ftp.py`](file:///D:/TECH/WEBSITE/SALARY%20ATTENDANCE/deploy_to_hostinger_ftp.py)
+  - [`salary_best_travel_ltd_upload.zip`](file:///D:/TECH/WEBSITE/SALARY%20ATTENDANCE/salary_best_travel_ltd_upload.zip)
+* **Summary of Changes:**
+  - Configured project for target domain **[`https://salary.best-travel.ltd`](https://salary.best-travel.ltd)** on Hostinger web hosting.
+  - Created production `.htaccess` with HTTPS redirection, security headers, Gzip compression, and browser caching.
+  - Created `build_hostinger_package.py` which compiles `salary_best_travel_ltd_upload.zip` containing `index.html`, `logo.png`, `.htaccess`, and `robots.txt`.
+  - Auto-mirrored `salary_best_travel_ltd_upload.zip` into `G:\My Drive\ALL WEBSITE WORKPLACE\BEST FORCE LTD SALARY ATTENDENCE\`.
+  - Built `deploy_to_hostinger_ftp.py` for direct automated FTP/FTPS deployment.
+
+---
+
 ## 🔮 4. Future Roadmap & Planned Upgrades
 
 1. **Automated SQLite / MySQL Persistence Layer:**
@@ -142,10 +168,12 @@ D:\TECH\WEBSITE\SALARY ATTENDANCE\
 
 | Component | Status | Target / URI | Notes |
 |---|---|---|---|
-| **GitHub Repository** | ✅ Connected & Pushed | `https://github.com/gixsam/SALARY-ATTENDANCE` | Main branch synced with commit `386871c` |
+| **Production Domain** | 🟡 Awaiting Upload | `https://salary.best-travel.ltd` | DNS resolves to Hostinger (`2.57.91.130`). Ready for ZIP extract |
+| **Hostinger Package** | ✅ Built | `salary_best_travel_ltd_upload.zip` | Available in Local & Google Drive |
+| **GitHub Repository** | ✅ Connected & Pushed | `https://github.com/gixsam/SALARY-ATTENDANCE` | Main branch synced |
 | **Local Web Server** | ✅ Active | `http://127.0.0.1:8080` | Running via PHP 8.3 CLI (Daemon Task 70) |
 | **Cloudflare Tunnel** | ✅ Active | `https://petroleum-echo-mirrors-rio.trycloudflare.com` | Verified HTTP 200 via `cloudflared` (Daemon Task 78) |
 | **Company Logo** | ✅ Active | `logo.png` | Official high-res logo with transparent background & favicon |
 | **A4 Voucher Engine** | ✅ Verified | `index.html` (Tab 1) | Single/Batch A4 PDF & styled Excel workbooks |
 | **Staff Database** | ✅ Verified | 25 Verified Records | LocalStorage (V5) cache with factory fallback |
-| **Google Drive Sync** | ✅ Synchronized | `G:\My Drive\ALL WEBSITE WORKPLACE\BEST FORCE LTD SALARY ATTENDENCE\` | Mirror of `NOTE.md` synchronized |
+| **Google Drive Sync** | ✅ Synchronized | `G:\My Drive\ALL WEBSITE WORKPLACE\BEST FORCE LTD SALARY ATTENDENCE\` | Mirror of `NOTE.md` and ZIP package synchronized |
