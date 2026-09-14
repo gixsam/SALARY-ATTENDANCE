@@ -1674,250 +1674,322 @@
             }
         }
 
-        async function captureVoucherToCanvas(voucherElement) {
-            if (document.fonts && document.fonts.ready) await document.fonts.ready;
-            await new Promise(r => setTimeout(r, 60));
+        // ─────────────────────────────────────────────────────────────────────
+        // PURE jsPDF VECTOR VOUCHER ENGINE  (Update 011 — no html2canvas)
+        // ─────────────────────────────────────────────────────────────────────
+        function buildVoucherPdf(emp) {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+            _drawVoucherOnPdf(pdf, emp);
+            return pdf;
+        }
 
-            // Create an isolated sandbox attached to document.body
-            const sandbox = document.createElement('div');
-            sandbox.id = 'pdf-render-sandbox';
-            sandbox.style.position = 'fixed';
-            sandbox.style.left = '0';
-            sandbox.style.top = '0';
-            sandbox.style.width = '794px';
-            sandbox.style.minWidth = '794px';
-            sandbox.style.maxWidth = '794px';
-            sandbox.style.background = '#ffffff';
-            sandbox.style.zIndex = '99990';
-            sandbox.style.pointerEvents = 'none';
-            sandbox.style.margin = '0';
-            sandbox.style.padding = '0';
-            sandbox.style.boxSizing = 'border-box';
+        function _drawVoucherOnPdf(pdf, emp) {
+            // ── Page geometry ──────────────────────────────────────────────
+            const PW = 210, PH = 297;
+            const ML = 8, MT = 8;
+            const CW = PW - ML - ML;    // 194mm
+            let Y = MT;
 
-            // Deep-clone the voucher element
-            const clone = voucherElement.cloneNode(true);
-            clone.style.width = '794px';
-            clone.style.minWidth = '794px';
-            clone.style.maxWidth = '794px';
-            clone.style.boxSizing = 'border-box';
-            clone.style.padding = '12px 16px';
-            clone.style.background = '#ffffff';
-            clone.style.borderRadius = '0px';
-            clone.style.border = '2px solid #0f172a';
-            clone.style.margin = '0';
-            clone.style.boxShadow = 'none';
+            // ── Colour palette ────────────────────────────────────────────
+            function rgb(r,g,b){ return [r,g,b]; }
+            const C = {
+                black   : rgb(15,23,42),
+                white   : rgb(255,255,255),
+                sl100   : rgb(241,245,249),
+                sl200   : rgb(226,232,240),
+                sl300   : rgb(203,213,225),
+                sl700   : rgb(51,65,85),
+                friday  : rgb(203,213,225),
+                holiday : rgb(187,247,208),
+                absent  : rgb(254,226,226),
+                red     : rgb(153,27,27),
+                indigo  : rgb(49,46,129),
+                green   : rgb(6,95,70),
+                amber   : rgb(180,100,20),
+            };
 
-            // 1. Header Styling
-            const logoImg = clone.querySelector('img');
-            if (logoImg) {
-                logoImg.style.width = '42px';
-                logoImg.style.height = '42px';
-                logoImg.style.marginBottom = '2px';
-                logoImg.style.display = 'block';
-            }
-            const h1 = clone.querySelector('h1');
-            if (h1) {
-                h1.style.fontSize = '19px';
-                h1.style.fontWeight = '900';
-                h1.style.lineHeight = '1.2';
-                h1.style.margin = '1px 0';
-                h1.style.color = '#020617';
-            }
-            const monthBadge = clone.querySelector('.bg-slate-100');
-            if (monthBadge) {
-                monthBadge.style.fontSize = '10.5px';
-                monthBadge.style.fontWeight = '800';
-                monthBadge.style.padding = '3px 12px';
-                monthBadge.style.marginTop = '2px';
+            // ── Drawing primitives ────────────────────────────────────────
+            function fill(c){ pdf.setFillColor(c[0],c[1],c[2]); }
+            function draw(c){ pdf.setDrawColor(c[0],c[1],c[2]); }
+            function ink(c) { pdf.setTextColor(c[0],c[1],c[2]); }
+            function lw(w)  { pdf.setLineWidth(w); }
+
+            function fillRect(x,y,w,h,c){ fill(c); pdf.rect(x,y,w,h,'F'); }
+            function strokeRect(x,y,w,h,c,w2){
+                draw(c||C.black); lw(w2||0.2); pdf.rect(x,y,w,h,'S');
             }
 
-            // 2. Employee Info Table (ID, Nam, Desig)
-            const tables = clone.querySelectorAll('table');
-            const empTable = tables[0];
-            if (empTable) {
-                empTable.style.width = '100%';
-                empTable.style.tableLayout = 'fixed';
-                empTable.style.borderCollapse = 'collapse';
-                empTable.style.marginBottom = '6px';
-                empTable.style.border = '2px solid #0f172a';
-                empTable.querySelectorAll('tr').forEach(tr => {
-                    tr.style.height = '28px';
-                });
-                empTable.querySelectorAll('td').forEach(td => {
-                    td.style.setProperty('height', '28px', 'important');
-                    td.style.setProperty('padding-top', '5.5px', 'important');
-                    td.style.setProperty('padding-bottom', '0px', 'important');
-                    td.style.setProperty('padding-left', '2px', 'important');
-                    td.style.setProperty('padding-right', '2px', 'important');
-                    td.style.setProperty('line-height', '18px', 'important');
-                    td.style.setProperty('font-size', '11.5px', 'important');
-                    td.style.setProperty('text-align', 'center', 'important');
-                    td.style.setProperty('vertical-align', 'top', 'important');
-                    td.style.setProperty('box-sizing', 'border-box', 'important');
-                    td.style.setProperty('overflow', 'hidden', 'important');
-                    td.style.setProperty('white-space', 'nowrap', 'important');
-                });
-            }
-
-            // 3. Main Attendance Table
-            const attTable = clone.querySelector('.voucher-table');
-            if (attTable) {
-                attTable.style.width = '100%';
-                attTable.style.tableLayout = 'fixed';
-                attTable.style.borderCollapse = 'collapse';
-
-                // thead th
-                attTable.querySelectorAll('thead th').forEach(th => {
-                    th.style.setProperty('height', '26px', 'important');
-                    th.style.setProperty('padding-top', '4.5px', 'important');
-                    th.style.setProperty('padding-bottom', '0px', 'important');
-                    th.style.setProperty('line-height', '18px', 'important');
-                    th.style.setProperty('font-size', '11px', 'important');
-                    th.style.setProperty('font-weight', '800', 'important');
-                    th.style.setProperty('text-align', 'center', 'important');
-                    th.style.setProperty('vertical-align', 'top', 'important');
-                    th.style.setProperty('box-sizing', 'border-box', 'important');
-                });
-
-                // tbody rows & td
-                const tbodyRows = attTable.querySelectorAll('tbody tr');
-                tbodyRows.forEach(tr => {
-                    tr.style.setProperty('height', '24.5px', 'important');
-                    tr.style.setProperty('box-sizing', 'border-box', 'important');
-                    tr.querySelectorAll('td').forEach(td => {
-                        td.style.setProperty('height', '24.5px', 'important');
-                        td.style.setProperty('padding-top', '3.8px', 'important');
-                        td.style.setProperty('padding-bottom', '0px', 'important');
-                        td.style.setProperty('padding-left', '1px', 'important');
-                        td.style.setProperty('padding-right', '1px', 'important');
-                        td.style.setProperty('line-height', '18px', 'important');
-                        td.style.setProperty('font-size', '11px', 'important');
-                        td.style.setProperty('text-align', 'center', 'important');
-                        td.style.setProperty('vertical-align', 'top', 'important');
-                        td.style.setProperty('box-sizing', 'border-box', 'important');
-                        td.style.setProperty('overflow', 'hidden', 'important');
-                        td.style.setProperty('white-space', 'nowrap', 'important');
-                    });
-                });
-
-                // tfoot td
-                attTable.querySelectorAll('tfoot td').forEach(td => {
-                    td.style.setProperty('height', '25px', 'important');
-                    td.style.setProperty('padding-top', '4px', 'important');
-                    td.style.setProperty('padding-bottom', '0px', 'important');
-                    td.style.setProperty('line-height', '18px', 'important');
-                    td.style.setProperty('font-size', '11px', 'important');
-                    td.style.setProperty('font-weight', '800', 'important');
-                    td.style.setProperty('text-align', 'center', 'important');
-                    td.style.setProperty('vertical-align', 'top', 'important');
-                    td.style.setProperty('box-sizing', 'border-box', 'important');
-                });
-            }
-
-            // 4. Duty & Salary Breakdown
-            const breakdownGrid = clone.querySelector('.grid.grid-cols-2');
-            if (breakdownGrid) {
-                breakdownGrid.style.marginTop = '6px';
-                breakdownGrid.style.marginBottom = '6px';
-                const subTable = breakdownGrid.querySelector('table');
-                if (subTable) {
-                    subTable.querySelectorAll('tr').forEach(tr => {
-                        tr.style.height = '22px';
-                    });
-                    subTable.querySelectorAll('td').forEach(td => {
-                        td.style.height = '22px';
-                        td.style.paddingTop = '2.5px';
-                        td.style.paddingBottom = '0px';
-                        td.style.paddingLeft = '6px';
-                        td.style.paddingRight = '6px';
-                        td.style.lineHeight = '18px';
-                        td.style.fontSize = '10.5px';
-                        td.style.boxSizing = 'border-box';
-                    });
+            // Draw a single table cell: fill + border + centered text
+            function cell(x, y, w, h, txt, opts) {
+                opts = opts || {};
+                if (opts.fill) fillRect(x, y, w, h, opts.fill);
+                draw(opts.dc || C.black);
+                lw(opts.lw || 0.2);
+                pdf.rect(x, y, w, h, 'S');
+                if (txt !== undefined && txt !== null && String(txt) !== '') {
+                    const s = opts.size || 8;
+                    pdf.setFontSize(s);
+                    pdf.setFont('helvetica', opts.bold ? 'bold' : 'normal');
+                    ink(opts.color || C.black);
+                    const isLeft = opts.align === 'left';
+                    const xp = isLeft ? x + 1.5 : x + w / 2;
+                    const yp = y + h / 2 + s * 0.18;  // optical baseline
+                    let t = String(txt);
+                    // Truncate to fit width
+                    const maxW = w - (isLeft ? 3 : 2);
+                    while (t.length > 1 && pdf.getTextWidth(t) > maxW) t = t.slice(0, -1);
+                    pdf.text(t, xp, yp, { align: isLeft ? 'left' : 'center', baseline: 'alphabetic' });
                 }
-                const rightCard = breakdownGrid.children[1];
-                if (rightCard) {
-                    rightCard.style.padding = '5px 8px';
-                    rightCard.querySelectorAll('div').forEach(d => {
-                        d.style.fontSize = '10.5px';
-                    });
-                    const netSpan = rightCard.querySelector('.text-emerald-800');
-                    if (netSpan) {
-                        netSpan.style.fontSize = '12.5px';
-                        netSpan.style.fontWeight = '900';
-                        netSpan.style.padding = '2px 8px';
+            }
+
+            // ── Outer border ──────────────────────────────────────────────
+            draw(C.black); lw(0.6);
+            pdf.rect(ML, MT, CW, PH - MT - 6, 'S');
+
+            // ── Header: Logo ──────────────────────────────────────────────
+            const logoEl = document.getElementById('headerLogoImg') || document.querySelector('img[src*="logo"]');
+            let logoH = 0;
+            if (logoEl && logoEl.complete && logoEl.naturalWidth > 0) {
+                try {
+                    const cvs = document.createElement('canvas');
+                    cvs.width = logoEl.naturalWidth; cvs.height = logoEl.naturalHeight;
+                    cvs.getContext('2d').drawImage(logoEl, 0, 0);
+                    const imgData = cvs.toDataURL('image/png');
+                    const lS = 14;
+                    pdf.addImage(imgData, 'PNG', ML + CW/2 - lS/2, Y + 0.5, lS, lS);
+                    logoH = lS + 1.5;
+                } catch(e) { logoH = 4; }
+            } else { logoH = 4; }
+            Y += logoH;
+
+            // "BEST OUTSOURCING" tagline
+            pdf.setFontSize(6.5); pdf.setFont('helvetica','bold'); ink(C.sl700);
+            pdf.text('BEST OUTSOURCING', ML + CW/2, Y, { align:'center' }); Y += 4.5;
+
+            // "BEST FORCE LTD."
+            pdf.setFontSize(17); pdf.setFont('helvetica','bold'); ink(C.black);
+            pdf.text('BEST FORCE LTD.', ML + CW/2, Y, { align:'center' }); Y += 5.5;
+
+            // "Head Office"
+            pdf.setFontSize(8); pdf.setFont('helvetica','normal'); ink(C.sl700);
+            pdf.text('Head Office', ML + CW/2, Y, { align:'center' }); Y += 4;
+
+            // Month badge
+            const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const mShort = MONTHS[APP_STATE.currentMonth].substring(0,3);
+            const badge = 'Staff Attendance Sheet ' + mShort + '.-' + APP_STATE.currentYear;
+            const bW = 84, bH = 6;
+            fillRect(ML + CW/2 - bW/2, Y - 4, bW, bH, C.sl100);
+            draw(C.sl300); lw(0.2); pdf.rect(ML + CW/2 - bW/2, Y - 4, bW, bH, 'S');
+            pdf.setFontSize(8.5); pdf.setFont('helvetica','bold'); ink(C.black);
+            pdf.text(badge, ML + CW/2, Y, { align:'center' }); Y += 3.5;
+
+            // Header divider
+            draw(C.black); lw(0.5); pdf.line(ML, Y, ML + CW, Y); Y += 2.5;
+
+            // ── Employee Info Row ─────────────────────────────────────────
+            const EH = 7;
+            const ew = [CW*0.08, CW*0.13, CW*0.08, CW*0.35, CW*0.10];
+            const lastW = CW - ew.reduce((a,b)=>a+b,0);
+            let ex = ML;
+            cell(ex, Y, ew[0], EH, 'ID:',          { fill:C.sl200, bold:true, size:8 }); ex+=ew[0];
+            cell(ex, Y, ew[1], EH, emp.id,          { bold:true, color:C.indigo, size:8 }); ex+=ew[1];
+            cell(ex, Y, ew[2], EH, 'Nam:',          { fill:C.sl200, bold:true, size:8 }); ex+=ew[2];
+            cell(ex, Y, ew[3], EH, emp.name,        { bold:true, size:8 }); ex+=ew[3];
+            cell(ex, Y, ew[4], EH, 'Desig:',        { fill:C.sl200, bold:true, size:8 }); ex+=ew[4];
+            cell(ex, Y, lastW, EH, emp.dept||'Staff',{ bold:true, size:8, align:'left' });
+            // thick outer border
+            draw(C.black); lw(0.5); pdf.rect(ML, Y, CW, EH, 'S');
+            Y += EH;
+
+            // ── Attendance Table Header ───────────────────────────────────
+            const COL = [
+                { w:CW*0.14, label:'Date'      },
+                { w:CW*0.13, label:'Check In'  },
+                { w:CW*0.13, label:'Check Out' },
+                { w:CW*0.11, label:'HOUR'      },
+                { w:CW*0.11, label:'MINUTE'    },
+                { w:CW*0.09, label:'Abs'       },
+            ];
+            // last col fills remaining width
+            const usedW = COL.reduce((s,c)=>s+c.w,0);
+            COL.push({ w: CW - usedW, label:'Remarks' });
+
+            const THdr = 6.5;
+            let hx = ML;
+            COL.forEach(c => {
+                fillRect(hx, Y, c.w, THdr, C.black);
+                draw(C.sl700); lw(0.15); pdf.rect(hx, Y, c.w, THdr, 'S');
+                pdf.setFontSize(7.5); pdf.setFont('helvetica','bold'); ink(C.white);
+                pdf.text(c.label, hx + c.w/2, Y + THdr/2 + 7.5*0.18, { align:'center', baseline:'alphabetic' });
+                hx += c.w;
+            });
+            Y += THdr;
+
+            // ── Attendance Data Rows ──────────────────────────────────────
+            const tDays = getDaysInMonth(APP_STATE.currentYear, APP_STATE.currentMonth);
+            const pad   = n => String(n).padStart(2,'0');
+
+            // Auto-calculate row height to fill the remaining page space
+            // Reserve ~30mm for breakdown section + signatures + margins
+            const remainH = (PH - 6) - Y - 30;
+            const RH = Math.min(Math.max(remainH / (tDays + 1.5), 4.5), 6.2);
+
+            let tMin = 0, absentCount = 0;
+
+            for (let d = 1; d <= tDays; d++) {
+                const dateO = new Date(APP_STATE.currentYear, APP_STATE.currentMonth, d);
+                const isF   = dateO.getDay() === 5;
+                const iso   = APP_STATE.currentYear + '-' + pad(APP_STATE.currentMonth+1) + '-' + pad(d);
+                const hol   = APP_STATE.holidays[iso];
+                const log   = APP_STATE.attendanceLogs[emp.id + '_' + iso] || {};
+                const c     = calcTime(log.inTime, log.outTime);
+
+                let bg = C.white, absT = '', rH = '', rM = '', rem = log.remarks || '';
+                let absC = C.black;
+
+                if (isF || hol) {
+                    bg = isF ? C.friday : C.holiday;
+                    rem = rem || (isF ? 'Friday' : hol);
+                    if (log.forceHours !== undefined) {
+                        rH = log.forceHours; rM = log.forceMinutes > 0 ? log.forceMinutes : '';
+                        tMin += (log.forceHours * 60 + (log.forceMinutes || 0));
+                    } else {
+                        let cred = getOffDayCredit(emp.id, d, tDays);
+                        tMin += cred * 60; if (cred > 0) rH = cred;
                     }
+                } else if (log.forceHours !== undefined) {
+                    rH = log.forceHours; rM = log.forceMinutes > 0 ? log.forceMinutes : '';
+                    tMin += (log.forceHours * 60 + (log.forceMinutes || 0));
+                    if (log.forceHours === 0 && (!log.forceMinutes || log.forceMinutes === 0) && !c.tm) {
+                        bg = C.absent; absT = 'A'; absC = C.red; absentCount++;
+                    }
+                } else if (!log.inTime || !log.outTime || c.tm === 0) {
+                    bg = C.absent; absT = 'A'; absC = C.red; absentCount++;
+                } else {
+                    tMin += c.tm; rH = c.h > 0 ? c.h : '0'; rM = c.m > 0 ? c.m : '';
                 }
-            }
 
-            // 5. Signature Lines Clearance
-            const sigDiv = clone.querySelector('.grid.grid-cols-4');
-            if (sigDiv) {
-                sigDiv.style.marginTop = '32px';
-                sigDiv.style.marginBottom = '6px';
-                sigDiv.querySelectorAll('div > div').forEach(d => {
-                    d.style.fontSize = '10px';
-                    d.style.fontWeight = '800';
-                    d.style.paddingTop = '5px';
-                    d.style.borderTop = '2px solid #0f172a';
-                    d.style.textAlign = 'center';
+                const dLabel = d + '/' + (APP_STATE.currentMonth+1) + '/' + String(APP_STATE.currentYear).slice(-2);
+                let rx = ML;
+                fillRect(rx, Y, CW, RH, bg);
+                draw(C.sl300); lw(0.15);
+
+                const vals = [dLabel, c.di||log.inTime||'', c.do||log.outTime||'', rH, rM, absT, rem];
+                COL.forEach((col, i) => {
+                    pdf.rect(rx, Y, col.w, RH, 'S');
+                    const v = vals[i];
+                    if (v !== undefined && String(v) !== '') {
+                        const s = i === 6 ? 6.5 : 7.5;
+                        pdf.setFontSize(s); pdf.setFont('helvetica', (i <= 0 || i >= 3 && i <= 5) ? 'bold' : 'normal');
+                        ink(i === 5 ? absC : C.black);
+                        const isL = (i === 6);
+                        const xp = isL ? rx + 1.5 : rx + col.w / 2;
+                        const yp = Y + RH / 2 + s * 0.18;
+                        let t = String(v);
+                        const mW = col.w - (isL ? 3 : 2);
+                        while (t.length > 1 && pdf.getTextWidth(t) > mW) t = t.slice(0,-1);
+                        pdf.text(t, xp, yp, { align: isL ? 'left' : 'center', baseline:'alphabetic' });
+                    }
+                    rx += col.w;
                 });
+
+                Y += RH;
             }
 
-            sandbox.appendChild(clone);
-            document.body.appendChild(sandbox);
-
-            try {
-                return await html2canvas(clone, {
-                    scale: 2.5,
-                    useCORS: true,
-                    allowTaint: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    width: 794,
-                    windowWidth: 794
-                });
-            } finally {
-                sandbox.remove();
+            // ── Totals Footer Row ─────────────────────────────────────────
+            let tHrs = Math.floor(tMin/60), rMins = tMin % 60;
+            if (emp.overrideDutyHours) {
+                tHrs  = Math.floor(emp.overrideDutyHours);
+                rMins = Math.round((emp.overrideDutyHours - tHrs) * 60);
             }
+            const adv = emp.advance || 0;
+            const fn  = emp.fine    || 0;
+            const net = emp.overrideNet !== undefined
+                ? emp.overrideNet
+                : Math.max(0, Math.round((tHrs + rMins/60) * (emp.basicSalary / 248)) - adv - fn);
+
+            const FH = RH + 0.5;
+            let fx = ML;
+            fillRect(ML, Y, CW, FH, C.sl100);
+            const spanW = COL[0].w + COL[1].w + COL[2].w;
+            cell(fx, Y, spanW,    FH, 'Total:', { fill:C.sl100, bold:true, size:8 }); fx += spanW;
+            cell(fx, Y, COL[3].w, FH, tHrs,    { fill:C.sl100, bold:true, size:8 }); fx += COL[3].w;
+            cell(fx, Y, COL[4].w, FH, rMins,   { fill:C.sl100, bold:true, size:8 }); fx += COL[4].w;
+            cell(fx, Y, COL[5].w, FH, absentCount||'', { fill:C.sl100, bold:true, size:8, color:C.red }); fx += COL[5].w;
+            cell(fx, Y, COL[6].w, FH, 'Verified', { fill:C.sl100, size:7.5, color:C.sl700 });
+            draw(C.black); lw(0.5); pdf.rect(ML, Y, CW, FH, 'S');
+            Y += FH + 2;
+
+            // ── Duty & Salary Breakdown ───────────────────────────────────
+            const BD = 6.5;
+            const leftW  = CW * 0.46;
+            const rightW = CW - leftW - 2;
+            const rx2    = ML + leftW + 2;
+
+            // Left panel
+            [
+                { l:'Total Duty', v: tHrs + 'h ' + rMins + 'm',              vc:C.indigo },
+                { l:'Advance',    v: adv > 0 ? adv + '/-' : '-',             vc:C.amber  },
+                { l:'Fine',       v: fn  > 0 ? fn  + '/-' : '-',             vc:C.red    },
+            ].forEach((r,i) => {
+                const ry = Y + i * BD;
+                cell(ML,           ry, leftW*0.42, BD, r.l, { fill:C.sl100, bold:true, size:7.5, align:'left' });
+                cell(ML+leftW*0.42, ry, leftW*0.58, BD, r.v, { bold:true, size:7.5, color:r.vc });
+            });
+            draw(C.black); lw(0.5); pdf.rect(ML, Y, leftW, BD*3, 'S');
+
+            // Right panel
+            [
+                { l:'Basic Salary:',   v:'Tk. '+emp.basicSalary.toLocaleString(),       vc:C.black },
+                { l:'Status:',         v: emp.approvalNote||'Hourly Rate Calculated',   vc:C.indigo },
+                { l:'Advance Deduct:', v: adv > 0 ? '- Tk. '+adv.toLocaleString() : '-', vc:C.amber },
+            ].forEach((r,i) => {
+                const ry = Y + i * BD;
+                pdf.setFontSize(7.5); pdf.setFont('helvetica','normal'); ink(C.sl700);
+                pdf.text(r.l, rx2+1.5, ry+BD/2+7.5*0.18, { align:'left', baseline:'alphabetic' });
+                pdf.setFont('helvetica','bold'); ink(r.vc);
+                pdf.text(String(r.v), rx2+rightW-1.5, ry+BD/2+7.5*0.18, { align:'right', baseline:'alphabetic' });
+                draw(C.sl300); lw(0.15); pdf.line(rx2, ry+BD, rx2+rightW, ry+BD);
+            });
+
+            // NET PAYABLE
+            const netY = Y + BD * 3;
+            const netH = BD + 1;
+            fillRect(rx2, netY, rightW, netH, C.sl100);
+            draw(C.black); lw(0.5); pdf.rect(rx2, Y, rightW, BD*3+netH, 'S');
+            pdf.setFontSize(9); pdf.setFont('helvetica','bold'); ink(C.black);
+            pdf.text('NET PAYABLE:', rx2+1.5, netY+netH/2+9*0.18, { align:'left', baseline:'alphabetic' });
+            ink(C.green);
+            pdf.text('Tk. '+net.toLocaleString(), rx2+rightW-1.5, netY+netH/2+9*0.18, { align:'right', baseline:'alphabetic' });
+
+            // ── Signature Lines ───────────────────────────────────────────
+            const sigY = PH - 6 - 10;
+            ['CEO','CONT. MANAGER','MD','SALARY RECIPIENT'].forEach((lbl,i) => {
+                const sx = ML + i * (CW/4);
+                draw(C.black); lw(0.5);
+                pdf.line(sx + 3, sigY, sx + CW/4 - 3, sigY);
+                pdf.setFontSize(7); pdf.setFont('helvetica','bold'); ink(C.black);
+                pdf.text(lbl, sx + CW/8, sigY + 3.5, { align:'center' });
+            });
         }
 
         async function downloadSingleEmployeePdf() {
             const sel = document.getElementById('a4EmpSelect');
             const emp = APP_STATE.employees.find(e => e.id === sel.value) || APP_STATE.employees[0];
             const shortMonth = MONTH_NAMES[APP_STATE.currentMonth].substring(0, 3);
-            const fileName = `Voucher_${emp.id}_${emp.name.replace(/\s+/g, '_')}_${shortMonth}_${APP_STATE.currentYear}.pdf`;
+            const fileName = `Voucher_${emp.id}_${emp.name.replace(/\s+/g,'_')}_${shortMonth}_${APP_STATE.currentYear}.pdf`;
 
             document.getElementById('pdf-progress-card').classList.remove('hidden');
             document.getElementById('pdf-progress-text').textContent = `Generating PDF: ${emp.name}`;
-            renderA4Sheet();
-            await new Promise(r => setTimeout(r, 80));
-
-            const voucher = document.querySelector('#a4SheetContainer .a4-voucher-box');
-            if (!voucher) {
-                document.getElementById('pdf-progress-card').classList.add('hidden');
-                return;
-            }
-
             try {
-                const canvas = await captureVoucherToCanvas(voucher);
-                const imgData = canvas.toDataURL('image/jpeg', 0.98);
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-
-                const pageWidth = 210;
-                const pageHeight = 297;
-                const marginX = 5;
-                const targetWidth = pageWidth - (marginX * 2); // 200mm
-                const targetHeight = (canvas.height * targetWidth) / canvas.width;
-                const topMargin = Math.max(5, (pageHeight - targetHeight) / 2);
-
-                pdf.addImage(imgData, 'JPEG', marginX, topMargin, targetWidth, Math.min(targetHeight, pageHeight - 10));
+                const pdf = buildVoucherPdf(emp);
                 pdf.save(fileName);
                 showToast(`Downloaded: ${fileName}`, 'success');
             } catch(e) {
-                console.error(e);
-                window.print();
+                console.error('PDF error:', e);
+                showToast('PDF generation failed: ' + e.message, 'error');
             } finally {
                 document.getElementById('pdf-progress-card').classList.add('hidden');
             }
@@ -1925,48 +1997,24 @@
 
         async function downloadAllEmployeesPdf() {
             const shortMonth = MONTH_NAMES[APP_STATE.currentMonth].substring(0, 3);
-            const fileName = `Best_Force_Ltd_All_Vouchers_${shortMonth}_${APP_STATE.currentYear}.pdf`;
+            const fileName   = `Best_Force_Ltd_All_Vouchers_${shortMonth}_${APP_STATE.currentYear}.pdf`;
             const card = document.getElementById('pdf-progress-card');
             const text = document.getElementById('pdf-progress-text');
             card.classList.remove('hidden');
-
-            const sel = document.getElementById('a4EmpSelect');
-            const origId = sel.value;
-
             try {
                 const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-                const pageWidth = 210;
-                const pageHeight = 297;
-                const marginX = 5;
-                const targetWidth = pageWidth - (marginX * 2); // 200mm
-
-                for(let i=0; i<APP_STATE.employees.length; i++) {
-                    const emp = APP_STATE.employees[i];
+                const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4', compress:true });
+                APP_STATE.employees.forEach((emp, i) => {
                     text.textContent = `Generating (${i+1}/${APP_STATE.employees.length}): ${emp.name}`;
-                    sel.value = emp.id;
-                    renderA4Sheet();
-                    await new Promise(r => setTimeout(r, 80));
-
-                    const voucher = document.querySelector('#a4SheetContainer .a4-voucher-box');
-                    if(!voucher) continue;
-
-                    const canvas = await captureVoucherToCanvas(voucher);
-                    const imgData = canvas.toDataURL('image/jpeg', 0.98);
-                    const targetHeight = (canvas.height * targetWidth) / canvas.width;
-                    const topMargin = Math.max(5, (pageHeight - targetHeight) / 2);
-
-                    if (i > 0) pdf.addPage('a4', 'portrait');
-                    pdf.addImage(imgData, 'JPEG', marginX, topMargin, targetWidth, Math.min(targetHeight, pageHeight - 10));
-                }
-
+                    if (i > 0) pdf.addPage('a4','portrait');
+                    _drawVoucherOnPdf(pdf, emp);
+                });
                 pdf.save(fileName);
                 showToast(`Downloaded all ${APP_STATE.employees.length} vouchers`, 'success');
             } catch(e) {
-                console.error(e);
+                console.error('Batch PDF error:', e);
+                showToast('Batch PDF failed: ' + e.message, 'error');
             } finally {
-                sel.value = origId;
-                renderA4Sheet();
                 card.classList.add('hidden');
             }
         }

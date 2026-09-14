@@ -15,6 +15,27 @@
 
 ---
 
+## [Update 011] — Pure jsPDF Vector PDF Engine (2026-09-14)
+**Type:** Major Feature Replacement — PDF Generation Complete Rewrite  
+**Status:** ✅ COMPLETED
+
+### Problem
+The `html2canvas` + jsPDF screenshot pipeline produced a compressed, tiny PDF — text was misaligned and very small because html2canvas captured a small mobile DOM screenshot and stretched it to A4.
+
+### Solution
+**Completely deleted** `captureVoucherToCanvas()`, old `downloadSingleEmployeePdf()`, old `downloadAllEmployeesPdf()`. Replaced with a **pure jsPDF vector drawing engine** (no html2canvas for voucher PDFs):
+
+- `buildVoucherPdf(emp)` — creates jsPDF doc, calls `_drawVoucherOnPdf`, returns pdf
+- `_drawVoucherOnPdf(pdf, emp)` — draws everything directly: logo, header, employee bar, attendance table (colored rows), totals, breakdown, signatures
+- `downloadSingleEmployeePdf()` — calls `buildVoucherPdf` only; no DOM manipulation
+- `downloadAllEmployeesPdf()` — one jsPDF, calls `_drawVoucherOnPdf` per `addPage()`; fully synchronous
+- Text centered using: `y = cellY + cellH/2 + fontSize * 0.18` for optical baseline alignment
+- `html2canvas` still used by `downloadSummaryPdfDirect` (summary sheet, unchanged)
+
+**Files Modified:** `index.html` lines 1677–1972 replaced (14,582 chars removed → 18,007 chars new engine)
+
+---
+
 ## 📌 1. Master Rule & Maintenance Directive
 
 This file (`NOTE.md`) is the **mandatory, single source of truth** for all historical, present, and future updates to the Best Force Ltd. Salary Attendance & Payroll System.
