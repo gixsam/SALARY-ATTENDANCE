@@ -15,6 +15,39 @@
 
 ---
 
+## [Update 016] — Full-Page Vector PDF Voucher Engine & Centered Visual Calibration (2026-09-15)
+**Type:** Major PDF Generation Engine Calibration & Layout Overhaul  
+**Status:** ✅ COMPLETED
+
+### User Request & Problem
+The user uploaded a screenshot (`media_1789413970136.jpg`) demonstrating that downloaded single-employee and all-employee PDF vouchers did not download properly:
+1. The voucher table was vertically compressed and squished into the upper/middle of the A4 page, leaving over 100mm of dead white space around it.
+2. Character/text inside table cells (dates, times, duty hours, absences, remarks) were tiny, cramped, and not vertically/horizontally centered.
+3. The Net Payable section at the bottom-right had squished badge styling, and signature lines (`CEO`, `CONT. MANAGER`, `MD`, `SALARY RECIPIENT`) were crammed right under the table without proper clearance.
+
+### Root Cause
+`downloadSingleEmployeePdf()` and `downloadAllEmployeesPdf()` were using `_captureVoucherExact(emp)` (an `html2canvas` screenshotter) on `.a4-voucher-box`. Because the responsive web element has an aspect ratio of ~0.95 (nearly square), scaling it to fit A4 width (200mm) made its height only ~190mm on a 297mm page, leaving over 100mm of dead blank space and reducing font sizes to ~7pt.
+
+### Architectural Fix & Calibrations
+1. **Direct Vector Engine Connection (`_drawVoucherOnPdf`):**
+   - Completely replaced the blurry `html2canvas` screenshotting for voucher downloads with our calibrated, high-definition pure jsPDF vector engine.
+   - Connected both `downloadSingleEmployeePdf()` and `downloadAllEmployeesPdf()` directly to `buildVoucherPdf(emp)` and `_drawVoucherOnPdf(pdf, emp)`.
+2. **Full-Page A4 Millimetric Geometry:**
+   - Standard A4 portrait ($210\text{mm} \times 297\text{mm}$).
+   - Uniform margins of 6mm on all 4 sides (`ML = 6, MR = 6, MT = 6, MB = 6`, `CW = 198mm`, `CH = 285mm`).
+   - Outer black border spans the full 285mm height (`pdf.rect(6, 6, 198, 285)`), framing the page completely.
+3. **Exact Character Centering & Font Calibration:**
+   - Dynamic row height formula: $\text{RH} = \frac{241.5 - Y}{\text{tDays}}$, giving ~6.15mm per row for 31-day months and ~6.35mm for 30-day months (nearly double the previous squished row height!).
+   - Every single cell's text (Date, Check In, Check Out, HOUR, MINUTE, Abs, Remarks) is horizontally centered (`x + col.w / 2`) and vertically centered with optical baseline calculation (`y + RH / 2 + s * 0.18`).
+   - Font size increased to crisp 8.5pt bold helvetica for all numbers and punches, with 7.5pt for remarks.
+4. **Isolated Monthly Data Integration:**
+   - `_drawVoucherOnPdf` retrieves data via `getEmpMonthData(emp, APP_STATE.currentYear, APP_STATE.currentMonth)` and `getEmpMonthDutyMinutes`, strictly preserving month-by-month financial isolation.
+5. **Calibrated Executive Breakdown & Signatures:**
+   - Breakdown box: Left side (Total Duty, Advance, Fine) in 3 equal rows; Right side (Basic Salary, Status, Advance Deduct, and highlighted Emerald Net Payable box).
+   - Signatures: 4 parallel lines (`CEO`, `CONT. MANAGER`, `MD`, `SALARY RECIPIENT`) fixed at $Y = 278\text{mm}$ with 6mm clearance above and 8.5mm clearance below to the outer border.
+
+---
+
 ## [Update 015] — High-Contrast Visual & CSS Overhaul (2026-09-15)
 **Type:** Major UI/UX & CSS Modernization — High-Contrast Executive Dashboard  
 **Status:** ✅ COMPLETED

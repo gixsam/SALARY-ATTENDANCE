@@ -2058,38 +2058,36 @@
         function _drawVoucherOnPdf(pdf, emp) {
             // ── Page geometry ──────────────────────────────────────────────
             const PW = 210, PH = 297;
-            const ML = 8, MT = 8;
-            const CW = PW - ML - ML;    // 194mm
+            const ML = 6, MR = 6, MT = 6, MB = 6;
+            const CW = PW - ML - MR;    // 198mm
+            const CH = PH - MT - MB;    // 285mm
             let Y = MT;
 
             // ── Colour palette ────────────────────────────────────────────
-            function rgb(r,g,b){ return [r,g,b]; }
+            function rgb(r, g, b) { return [r, g, b]; }
             const C = {
-                black   : rgb(15,23,42),
-                white   : rgb(255,255,255),
-                sl100   : rgb(241,245,249),
-                sl200   : rgb(226,232,240),
-                sl300   : rgb(203,213,225),
-                sl700   : rgb(51,65,85),
-                friday  : rgb(203,213,225),
-                holiday : rgb(187,247,208),
-                absent  : rgb(254,226,226),
-                red     : rgb(153,27,27),
-                indigo  : rgb(49,46,129),
-                green   : rgb(6,95,70),
-                amber   : rgb(180,100,20),
+                black   : rgb(15, 23, 42),
+                white   : rgb(255, 255, 255),
+                sl100   : rgb(241, 245, 249),
+                sl200   : rgb(226, 232, 240),
+                sl300   : rgb(203, 213, 225),
+                sl700   : rgb(51, 65, 85),
+                friday  : rgb(203, 213, 225),
+                holiday : rgb(187, 247, 208),
+                absent  : rgb(254, 226, 226),
+                red     : rgb(185, 28, 28),
+                indigo  : rgb(49, 46, 129),
+                emerald : rgb(6, 95, 70),
+                amber   : rgb(180, 83, 9),
             };
 
             // ── Drawing primitives ────────────────────────────────────────
-            function fill(c){ pdf.setFillColor(c[0],c[1],c[2]); }
-            function draw(c){ pdf.setDrawColor(c[0],c[1],c[2]); }
-            function ink(c) { pdf.setTextColor(c[0],c[1],c[2]); }
-            function lw(w)  { pdf.setLineWidth(w); }
+            function fill(c) { pdf.setFillColor(c[0], c[1], c[2]); }
+            function draw(c) { pdf.setDrawColor(c[0], c[1], c[2]); }
+            function ink(c)  { pdf.setTextColor(c[0], c[1], c[2]); }
+            function lw(w)   { pdf.setLineWidth(w); }
 
-            function fillRect(x,y,w,h,c){ fill(c); pdf.rect(x,y,w,h,'F'); }
-            function strokeRect(x,y,w,h,c,w2){
-                draw(c||C.black); lw(w2||0.2); pdf.rect(x,y,w,h,'S');
-            }
+            function fillRect(x, y, w, h, c) { fill(c); pdf.rect(x, y, w, h, 'F'); }
 
             // Draw a single table cell: fill + border + centered text
             function cell(x, y, w, h, txt, opts) {
@@ -2099,26 +2097,26 @@
                 lw(opts.lw || 0.2);
                 pdf.rect(x, y, w, h, 'S');
                 if (txt !== undefined && txt !== null && String(txt) !== '') {
-                    const s = opts.size || 8;
+                    const s = opts.size || 8.5;
                     pdf.setFontSize(s);
                     pdf.setFont('helvetica', opts.bold ? 'bold' : 'normal');
                     ink(opts.color || C.black);
                     const isLeft = opts.align === 'left';
-                    const xp = isLeft ? x + 1.5 : x + w / 2;
-                    const yp = y + h / 2 + s * 0.18;  // optical baseline
+                    const isRight = opts.align === 'right';
+                    const xp = isLeft ? x + 2.5 : (isRight ? x + w - 2.5 : x + w / 2);
+                    const yp = y + h / 2 + s * 0.18;
                     let t = String(txt);
-                    // Truncate to fit width
-                    const maxW = w - (isLeft ? 3 : 2);
+                    const maxW = w - (isLeft || isRight ? 4 : 2);
                     while (t.length > 1 && pdf.getTextWidth(t) > maxW) t = t.slice(0, -1);
-                    pdf.text(t, xp, yp, { align: isLeft ? 'left' : 'center', baseline: 'alphabetic' });
+                    pdf.text(t, xp, yp, { align: isLeft ? 'left' : (isRight ? 'right' : 'center'), baseline: 'alphabetic' });
                 }
             }
 
-            // ── Outer border ──────────────────────────────────────────────
-            draw(C.black); lw(0.6);
-            pdf.rect(ML, MT, CW, PH - MT - 6, 'S');
+            // ── 1. Outer Register Border (Full A4 coverage) ────────────────
+            draw(C.black); lw(0.5);
+            pdf.rect(ML, MT, CW, CH, 'S');
 
-            // ── Header: Logo ──────────────────────────────────────────────
+            // ── 2. Header: Logo & Company Info ────────────────────────────
             const logoEl = document.getElementById('headerLogoImg') || document.querySelector('img[src*="logo"]');
             let logoH = 0;
             if (logoEl && logoEl.complete && logoEl.naturalWidth > 0) {
@@ -2127,92 +2125,88 @@
                     cvs.width = logoEl.naturalWidth; cvs.height = logoEl.naturalHeight;
                     cvs.getContext('2d').drawImage(logoEl, 0, 0);
                     const imgData = cvs.toDataURL('image/png');
-                    const lS = 14;
-                    pdf.addImage(imgData, 'PNG', ML + CW/2 - lS/2, Y + 0.5, lS, lS);
-                    logoH = lS + 1.5;
-                } catch(e) { logoH = 4; }
-            } else { logoH = 4; }
+                    const lS = 12;
+                    pdf.addImage(imgData, 'PNG', ML + CW / 2 - lS / 2, Y + 1.0, lS, lS);
+                    logoH = lS + 2.5;
+                } catch(e) { logoH = 2.5; }
+            } else { logoH = 2.5; }
             Y += logoH;
 
             // "BEST OUTSOURCING" tagline
-            pdf.setFontSize(6.5); pdf.setFont('helvetica','bold'); ink(C.sl700);
-            pdf.text('BEST OUTSOURCING', ML + CW/2, Y, { align:'center' }); Y += 4.5;
+            pdf.setFontSize(7.5); pdf.setFont('helvetica', 'bold'); ink(C.sl700);
+            pdf.text('BEST OUTSOURCING', ML + CW / 2, Y, { align: 'center' }); Y += 4.8;
 
             // "BEST FORCE LTD."
-            pdf.setFontSize(17); pdf.setFont('helvetica','bold'); ink(C.black);
-            pdf.text('BEST FORCE LTD.', ML + CW/2, Y, { align:'center' }); Y += 5.5;
+            pdf.setFontSize(16.5); pdf.setFont('helvetica', 'bold'); ink(C.black);
+            pdf.text('BEST FORCE LTD.', ML + CW / 2, Y, { align: 'center' }); Y += 5.2;
 
             // "Head Office"
-            pdf.setFontSize(8); pdf.setFont('helvetica','normal'); ink(C.sl700);
-            pdf.text('Head Office', ML + CW/2, Y, { align:'center' }); Y += 4;
+            pdf.setFontSize(8.5); pdf.setFont('helvetica', 'normal'); ink(C.sl700);
+            pdf.text('Head Office', ML + CW / 2, Y, { align: 'center' }); Y += 4.2;
 
             // Month badge
             const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-            const mShort = MONTHS[APP_STATE.currentMonth].substring(0,3);
+            const mShort = MONTHS[APP_STATE.currentMonth].substring(0, 3);
             const badge = 'Staff Attendance Sheet ' + mShort + '.-' + APP_STATE.currentYear;
-            const bW = 84, bH = 6;
-            fillRect(ML + CW/2 - bW/2, Y - 4, bW, bH, C.sl100);
-            draw(C.sl300); lw(0.2); pdf.rect(ML + CW/2 - bW/2, Y - 4, bW, bH, 'S');
-            pdf.setFontSize(8.5); pdf.setFont('helvetica','bold'); ink(C.black);
-            pdf.text(badge, ML + CW/2, Y, { align:'center' }); Y += 3.5;
+            const bW = 84, bH = 5.8;
+            fillRect(ML + CW / 2 - bW / 2, Y - 4.2, bW, bH, C.sl100);
+            draw(C.sl300); lw(0.2); pdf.rect(ML + CW / 2 - bW / 2, Y - 4.2, bW, bH, 'S');
+            pdf.setFontSize(8.5); pdf.setFont('helvetica', 'bold'); ink(C.black);
+            pdf.text(badge, ML + CW / 2, Y - 0.2, { align: 'center' }); Y += 3.6;
 
             // Header divider
-            draw(C.black); lw(0.5); pdf.line(ML, Y, ML + CW, Y); Y += 2.5;
+            draw(C.black); lw(0.5); pdf.line(ML, Y, ML + CW, Y); Y += 2.2;
 
-            // ── Employee Info Row ─────────────────────────────────────────
-            const EH = 7;
-            const ew = [CW*0.08, CW*0.13, CW*0.08, CW*0.35, CW*0.10];
-            const lastW = CW - ew.reduce((a,b)=>a+b,0);
+            // ── 3. Employee Info Row ───────────────────────────────────────
+            const EH = 7.0;
+            const ew = [14, 24, 16, 72, 18, CW - (14 + 24 + 16 + 72 + 18)];
             let ex = ML;
-            cell(ex, Y, ew[0], EH, 'ID:',          { fill:C.sl200, bold:true, size:8 }); ex+=ew[0];
-            cell(ex, Y, ew[1], EH, emp.id,          { bold:true, color:C.indigo, size:8 }); ex+=ew[1];
-            cell(ex, Y, ew[2], EH, 'Nam:',          { fill:C.sl200, bold:true, size:8 }); ex+=ew[2];
-            cell(ex, Y, ew[3], EH, emp.name,        { bold:true, size:8 }); ex+=ew[3];
-            cell(ex, Y, ew[4], EH, 'Desig:',        { fill:C.sl200, bold:true, size:8 }); ex+=ew[4];
-            cell(ex, Y, lastW, EH, emp.dept||'Staff',{ bold:true, size:8, align:'left' });
-            // thick outer border
+            cell(ex, Y, ew[0], EH, 'ID:',    { fill: C.sl200, bold: true, size: 8.5 }); ex += ew[0];
+            cell(ex, Y, ew[1], EH, emp.id,   { bold: true, color: C.indigo, size: 8.5 }); ex += ew[1];
+            cell(ex, Y, ew[2], EH, 'Nam:',   { fill: C.sl200, bold: true, size: 8.5 }); ex += ew[2];
+            cell(ex, Y, ew[3], EH, emp.name, { bold: true, size: 8.5, align: 'center' }); ex += ew[3];
+            cell(ex, Y, ew[4], EH, 'Desig:', { fill: C.sl200, bold: true, size: 8.5 }); ex += ew[4];
+            cell(ex, Y, ew[5], EH, emp.dept || 'Staff', { bold: true, size: 8.5, align: 'center' });
             draw(C.black); lw(0.5); pdf.rect(ML, Y, CW, EH, 'S');
             Y += EH;
 
-            // ── Attendance Table Header ───────────────────────────────────
+            // ── 4. Attendance Table Column Definitions ─────────────────────
             const COL = [
-                { w:CW*0.14, label:'Date'      },
-                { w:CW*0.13, label:'Check In'  },
-                { w:CW*0.13, label:'Check Out' },
-                { w:CW*0.11, label:'HOUR'      },
-                { w:CW*0.11, label:'MINUTE'    },
-                { w:CW*0.09, label:'Abs'       },
+                { w: 28, label: 'Date'      },
+                { w: 26, label: 'Check In'  },
+                { w: 26, label: 'Check Out' },
+                { w: 22, label: 'HOUR'      },
+                { w: 22, label: 'MINUTE'    },
+                { w: 18, label: 'Abs'       },
             ];
-            // last col fills remaining width
-            const usedW = COL.reduce((s,c)=>s+c.w,0);
-            COL.push({ w: CW - usedW, label:'Remarks' });
+            const usedW = COL.reduce((s, c) => s + c.w, 0);
+            COL.push({ w: CW - usedW, label: 'Remarks' });
 
-            const THdr = 6.5;
+            const THdr = 6.2;
             let hx = ML;
             COL.forEach(c => {
                 fillRect(hx, Y, c.w, THdr, C.black);
                 draw(C.sl700); lw(0.15); pdf.rect(hx, Y, c.w, THdr, 'S');
-                pdf.setFontSize(7.5); pdf.setFont('helvetica','bold'); ink(C.white);
-                pdf.text(c.label, hx + c.w/2, Y + THdr/2 + 7.5*0.18, { align:'center', baseline:'alphabetic' });
+                pdf.setFontSize(8); pdf.setFont('helvetica', 'bold'); ink(C.white);
+                pdf.text(c.label, hx + c.w / 2, Y + THdr / 2 + 8 * 0.18, { align: 'center', baseline: 'alphabetic' });
                 hx += c.w;
             });
             Y += THdr;
 
-            // ── Attendance Data Rows ──────────────────────────────────────
+            // ── 5. Attendance Data Rows (Auto-calibrated to fill A4) ────────
             const tDays = getDaysInMonth(APP_STATE.currentYear, APP_STATE.currentMonth);
-            const pad   = n => String(n).padStart(2,'0');
+            const pad   = n => String(n).padStart(2, '0');
 
-            // Auto-calculate row height to fill the remaining page space
-            // Reserve ~30mm for breakdown section + signatures + margins
-            const remainH = (PH - 6) - Y - 30;
-            const RH = Math.min(Math.max(remainH / (tDays + 1.5), 4.5), 6.2);
+            // Dynamic height so table exactly reaches Y = 241.5mm
+            const targetTableEndY = 241.5;
+            const RH = (targetTableEndY - Y) / tDays;
 
             let tMin = 0, absentCount = 0;
 
             for (let d = 1; d <= tDays; d++) {
                 const dateO = new Date(APP_STATE.currentYear, APP_STATE.currentMonth, d);
                 const isF   = dateO.getDay() === 5;
-                const iso   = APP_STATE.currentYear + '-' + pad(APP_STATE.currentMonth+1) + '-' + pad(d);
+                const iso   = APP_STATE.currentYear + '-' + pad(APP_STATE.currentMonth + 1) + '-' + pad(d);
                 const hol   = APP_STATE.holidays[iso];
                 const log   = APP_STATE.attendanceLogs[emp.id + '_' + iso] || {};
                 const c     = calcTime(log.inTime, log.outTime);
@@ -2242,26 +2236,26 @@
                     tMin += c.tm; rH = c.h > 0 ? c.h : '0'; rM = c.m > 0 ? c.m : '';
                 }
 
-                const dLabel = d + '/' + (APP_STATE.currentMonth+1) + '/' + String(APP_STATE.currentYear).slice(-2);
+                const dLabel = d + '/' + (APP_STATE.currentMonth + 1) + '/' + String(APP_STATE.currentYear).slice(-2);
                 let rx = ML;
                 fillRect(rx, Y, CW, RH, bg);
                 draw(C.sl300); lw(0.15);
 
-                const vals = [dLabel, c.di||log.inTime||'', c.do||log.outTime||'', rH, rM, absT, rem];
+                const vals = [dLabel, c.di || log.inTime || '', c.do || log.outTime || '', rH, rM, absT, rem];
                 COL.forEach((col, i) => {
                     pdf.rect(rx, Y, col.w, RH, 'S');
                     const v = vals[i];
                     if (v !== undefined && String(v) !== '') {
-                        const s = i === 6 ? 6.5 : 7.5;
-                        pdf.setFontSize(s); pdf.setFont('helvetica', (i <= 0 || i >= 3 && i <= 5) ? 'bold' : 'normal');
+                        const s = i === 6 ? 7.5 : 8.5;
+                        pdf.setFontSize(s);
+                        pdf.setFont('helvetica', (i === 0 || (i >= 3 && i <= 5)) ? 'bold' : 'normal');
                         ink(i === 5 ? absC : C.black);
-                        const isL = (i === 6);
-                        const xp = isL ? rx + 1.5 : rx + col.w / 2;
+                        const xp = rx + col.w / 2;
                         const yp = Y + RH / 2 + s * 0.18;
                         let t = String(v);
-                        const mW = col.w - (isL ? 3 : 2);
-                        while (t.length > 1 && pdf.getTextWidth(t) > mW) t = t.slice(0,-1);
-                        pdf.text(t, xp, yp, { align: isL ? 'left' : 'center', baseline:'alphabetic' });
+                        const mW = col.w - 2;
+                        while (t.length > 1 && pdf.getTextWidth(t) > mW) t = t.slice(0, -1);
+                        pdf.text(t, xp, yp, { align: 'center', baseline: 'alphabetic' });
                     }
                     rx += col.w;
                 });
@@ -2269,149 +2263,83 @@
                 Y += RH;
             }
 
-            // ── Totals Footer Row ─────────────────────────────────────────
-            let tHrs = Math.floor(tMin/60), rMins = tMin % 60;
-            if (emp.overrideDutyHours) {
-                tHrs  = Math.floor(emp.overrideDutyHours);
-                rMins = Math.round((emp.overrideDutyHours - tHrs) * 60);
+            // ── 6. Totals Footer Row ───────────────────────────────────────
+            const mData = getEmpMonthData(emp, APP_STATE.currentYear, APP_STATE.currentMonth);
+            let tHrs = Math.floor(tMin / 60), rMins = tMin % 60;
+            if (mData.overrideDutyHours !== undefined) {
+                tHrs  = Math.floor(mData.overrideDutyHours);
+                rMins = Math.round((mData.overrideDutyHours - tHrs) * 60);
             }
-            const adv = emp.advance || 0;
-            const fn  = emp.fine    || 0;
-            const net = emp.overrideNet !== undefined
-                ? emp.overrideNet
-                : Math.max(0, Math.round((tHrs + rMins/60) * (emp.basicSalary / 248)) - adv - fn);
+            const adv = mData.advance || 0;
+            const fn  = mData.fine    || 0;
+            const net = mData.overrideNet !== undefined
+                ? mData.overrideNet
+                : Math.max(0, Math.round((tHrs + rMins / 60) * (emp.basicSalary / 248)) - adv - fn);
 
-            const FH = RH + 0.5;
+            const FH = 6.2;
             let fx = ML;
             fillRect(ML, Y, CW, FH, C.sl100);
             const spanW = COL[0].w + COL[1].w + COL[2].w;
-            cell(fx, Y, spanW,    FH, 'Total:', { fill:C.sl100, bold:true, size:8 }); fx += spanW;
-            cell(fx, Y, COL[3].w, FH, tHrs,    { fill:C.sl100, bold:true, size:8 }); fx += COL[3].w;
-            cell(fx, Y, COL[4].w, FH, rMins,   { fill:C.sl100, bold:true, size:8 }); fx += COL[4].w;
-            cell(fx, Y, COL[5].w, FH, absentCount||'', { fill:C.sl100, bold:true, size:8, color:C.red }); fx += COL[5].w;
-            cell(fx, Y, COL[6].w, FH, 'Verified', { fill:C.sl100, size:7.5, color:C.sl700 });
+            cell(fx, Y, spanW,    FH, 'Total:', { fill: C.sl100, bold: true, size: 8.5 }); fx += spanW;
+            cell(fx, Y, COL[3].w, FH, tHrs,    { fill: C.sl100, bold: true, size: 8.5 }); fx += COL[3].w;
+            cell(fx, Y, COL[4].w, FH, rMins,   { fill: C.sl100, bold: true, size: 8.5 }); fx += COL[4].w;
+            cell(fx, Y, COL[5].w, FH, absentCount || '', { fill: C.sl100, bold: true, size: 8.5, color: C.red }); fx += COL[5].w;
+            cell(fx, Y, COL[6].w, FH, 'Verified', { fill: C.sl100, size: 8, color: C.sl700 });
             draw(C.black); lw(0.5); pdf.rect(ML, Y, CW, FH, 'S');
-            Y += FH + 2;
+            Y += FH + 2.0;
 
-            // ── Duty & Salary Breakdown ───────────────────────────────────
-            const BD = 6.5;
-            const leftW  = CW * 0.46;
+            // ── 7. Duty & Salary Breakdown ─────────────────────────────────
+            const BD_TOTAL_H = 22.0;
+            const leftW  = 92;
             const rightW = CW - leftW - 2;
             const rx2    = ML + leftW + 2;
+            const startBD_Y = Y;
 
-            // Left panel
+            const leftRowH = BD_TOTAL_H / 3;
             [
-                { l:'Total Duty', v: tHrs + 'h ' + rMins + 'm',              vc:C.indigo },
-                { l:'Advance',    v: adv > 0 ? adv + '/-' : '-',             vc:C.amber  },
-                { l:'Fine',       v: fn  > 0 ? fn  + '/-' : '-',             vc:C.red    },
-            ].forEach((r,i) => {
-                const ry = Y + i * BD;
-                cell(ML,           ry, leftW*0.42, BD, r.l, { fill:C.sl100, bold:true, size:7.5, align:'left' });
-                cell(ML+leftW*0.42, ry, leftW*0.58, BD, r.v, { bold:true, size:7.5, color:r.vc });
+                { l: 'Total Duty', v: tHrs + 'h ' + rMins + 'm',           vc: C.indigo },
+                { l: 'Advance',    v: adv > 0 ? adv + '/-' : '-',           vc: C.amber  },
+                { l: 'Fine',       v: fn > 0 ? fn + '/-' : '-',             vc: C.red    },
+            ].forEach((r, i) => {
+                const ry = startBD_Y + i * leftRowH;
+                cell(ML,            ry, leftW * 0.42, leftRowH, r.l, { fill: C.sl100, bold: true, size: 8, align: 'center' });
+                cell(ML + leftW * 0.42, ry, leftW * 0.58, leftRowH, r.v, { bold: true, size: 8.5, color: r.vc, align: 'center' });
             });
-            draw(C.black); lw(0.5); pdf.rect(ML, Y, leftW, BD*3, 'S');
+            draw(C.black); lw(0.5); pdf.rect(ML, startBD_Y, leftW, BD_TOTAL_H, 'S');
 
-            // Right panel
+            const rightRowH = 4.7;
             [
-                { l:'Basic Salary:',   v:'Tk. '+emp.basicSalary.toLocaleString(),       vc:C.black },
-                { l:'Status:',         v: emp.approvalNote||'Hourly Rate Calculated',   vc:C.indigo },
-                { l:'Advance Deduct:', v: adv > 0 ? '- Tk. '+adv.toLocaleString() : '-', vc:C.amber },
-            ].forEach((r,i) => {
-                const ry = Y + i * BD;
-                pdf.setFontSize(7.5); pdf.setFont('helvetica','normal'); ink(C.sl700);
-                pdf.text(r.l, rx2+1.5, ry+BD/2+7.5*0.18, { align:'left', baseline:'alphabetic' });
-                pdf.setFont('helvetica','bold'); ink(r.vc);
-                pdf.text(String(r.v), rx2+rightW-1.5, ry+BD/2+7.5*0.18, { align:'right', baseline:'alphabetic' });
-                draw(C.sl300); lw(0.15); pdf.line(rx2, ry+BD, rx2+rightW, ry+BD);
+                { l: 'Basic Salary:',   v: 'Tk. ' + emp.basicSalary.toLocaleString(),     vc: C.black  },
+                { l: 'Status:',         v: mData.approvalNote || 'Approved',              vc: C.indigo },
+                { l: 'Advance Deduct:', v: adv > 0 ? '- Tk. ' + adv.toLocaleString() : '-', vc: C.amber },
+            ].forEach((r, i) => {
+                const ry = startBD_Y + i * rightRowH;
+                pdf.setFontSize(8); pdf.setFont('helvetica', 'normal'); ink(C.sl700);
+                pdf.text(r.l, rx2 + 2, ry + rightRowH / 2 + 8 * 0.18, { align: 'left', baseline: 'alphabetic' });
+                pdf.setFont('helvetica', 'bold'); ink(r.vc);
+                pdf.text(String(r.v), rx2 + rightW - 2, ry + rightRowH / 2 + 8 * 0.18, { align: 'right', baseline: 'alphabetic' });
+                draw(C.sl300); lw(0.15); pdf.line(rx2, ry + rightRowH, rx2 + rightW, ry + rightRowH);
             });
 
-            // NET PAYABLE
-            const netY = Y + BD * 3;
-            const netH = BD + 1;
-            fillRect(rx2, netY, rightW, netH, C.sl100);
-            draw(C.black); lw(0.5); pdf.rect(rx2, Y, rightW, BD*3+netH, 'S');
-            pdf.setFontSize(9); pdf.setFont('helvetica','bold'); ink(C.black);
-            pdf.text('NET PAYABLE:', rx2+1.5, netY+netH/2+9*0.18, { align:'left', baseline:'alphabetic' });
-            ink(C.green);
-            pdf.text('Tk. '+net.toLocaleString(), rx2+rightW-1.5, netY+netH/2+9*0.18, { align:'right', baseline:'alphabetic' });
+            const netY = startBD_Y + rightRowH * 3;
+            const netH = BD_TOTAL_H - (rightRowH * 3);
+            fillRect(rx2, netY, rightW, netH, rgb(236, 253, 245));
+            draw(C.black); lw(0.5); pdf.rect(rx2, startBD_Y, rightW, BD_TOTAL_H, 'S');
+            pdf.setFontSize(9.5); pdf.setFont('helvetica', 'bold'); ink(C.black);
+            pdf.text('NET PAYABLE:', rx2 + 2, netY + netH / 2 + 9.5 * 0.18, { align: 'left', baseline: 'alphabetic' });
+            pdf.setFontSize(11); pdf.setFont('helvetica', 'bold'); ink(C.emerald);
+            pdf.text('Tk. ' + net.toLocaleString(), rx2 + rightW - 2, netY + netH / 2 + 11 * 0.18, { align: 'right', baseline: 'alphabetic' });
 
-            // ── Signature Lines ───────────────────────────────────────────
-            const sigY = PH - 6 - 10;
-            ['CEO','CONT. MANAGER','MD','SALARY RECIPIENT'].forEach((lbl,i) => {
-                const sx = ML + i * (CW/4);
+            // ── 8. Signatures ──────────────────────────────────────────────
+            const sigLineY = 278.0;
+            const sigColW = CW / 4;
+            ['CEO', 'CONT. MANAGER', 'MD', 'SALARY RECIPIENT'].forEach((lbl, i) => {
+                const sx = ML + i * sigColW;
                 draw(C.black); lw(0.5);
-                pdf.line(sx + 3, sigY, sx + CW/4 - 3, sigY);
-                pdf.setFontSize(7); pdf.setFont('helvetica','bold'); ink(C.black);
-                pdf.text(lbl, sx + CW/8, sigY + 3.5, { align:'center' });
+                pdf.line(sx + 5, sigLineY, sx + sigColW - 5, sigLineY);
+                pdf.setFontSize(7.5); pdf.setFont('helvetica', 'bold'); ink(C.black);
+                pdf.text(lbl, sx + sigColW / 2, sigLineY + 4.5, { align: 'center', baseline: 'alphabetic' });
             });
-        }
-
-        // ─────────────────────────────────────────────────────────────────────
-        // EXACT-COPY PDF CAPTURE (Update 012) — html2canvas at 820px width
-        // Produces a pixel-perfect copy of the on-screen voucher
-        // ─────────────────────────────────────────────────────────────────────
-
-        async function _captureVoucherExact(emp) {
-            // 1. Make sure the right employee is rendered on-screen
-            const sel = document.getElementById('a4EmpSelect');
-            if (sel.value !== emp.id) {
-                sel.value = emp.id;
-                renderA4Sheet();
-                await new Promise(r => setTimeout(r, 60));
-            }
-
-            const voucherBox = document.querySelector('#a4SheetContainer .a4-voucher-box');
-            if (!voucherBox) throw new Error('Voucher element not found');
-
-            // 2. Build an off-screen 794px-wide sandbox that mirrors the voucher exactly
-            const sandbox = document.createElement('div');
-            Object.assign(sandbox.style, {
-                position: 'fixed', left: '-9999px', top: '0',
-                width: '820px', minWidth: '820px', maxWidth: '820px',
-                background: 'transparent', zIndex: '-1',
-                pointerEvents: 'none', overflow: 'visible'
-            });
-
-            // 3. Clone the ENTIRE a4-screen-wrapper so all sm: classes apply at 820px
-            const wrapper = document.querySelector('.a4-screen-wrapper') || voucherBox.parentElement;
-            const clone = wrapper.cloneNode(true);
-            Object.assign(clone.style, {
-                width: '820px', minWidth: '820px', maxWidth: '820px',
-                margin: '0', padding: '0'
-            });
-            // Remove any hidden/collapsed states in the clone
-            clone.querySelectorAll('[class*="hidden"]').forEach(el => {
-                // Keep hidden only if it's truly supposed to be hidden (e.g. PDF progress card)
-            });
-
-            sandbox.appendChild(clone);
-            document.body.appendChild(sandbox);
-
-            // 4. Wait for fonts and layout
-            if (document.fonts && document.fonts.ready) await document.fonts.ready;
-            await new Promise(r => setTimeout(r, 80));
-
-            const voucherInSandbox = sandbox.querySelector('.a4-voucher-box');
-            if (!voucherInSandbox) {
-                sandbox.remove();
-                throw new Error('Cloned voucher not found in sandbox');
-            }
-
-            // 5. Capture with html2canvas — windowWidth 820 activates sm: Tailwind classes
-            try {
-                const canvas = await html2canvas(voucherInSandbox, {
-                    scale: 2.8,
-                    useCORS: true,
-                    allowTaint: true,
-                    logging: false,
-                    backgroundColor: '#ffffff',
-                    width: voucherInSandbox.offsetWidth || 796,
-                    windowWidth: 820
-                });
-                return canvas;
-            } finally {
-                sandbox.remove();
-            }
         }
 
         async function downloadSingleEmployeePdf() {
@@ -2423,32 +2351,19 @@
 
             const card = document.getElementById('pdf-progress-card');
             const text = document.getElementById('pdf-progress-text');
-            card.classList.remove('hidden');
-            text.textContent = `Generating PDF: ${emp.name}...`;
+            if (card) card.classList.remove('hidden');
+            if (text) text.textContent = `Generating Vector PDF: ${emp.name}...`;
 
             try {
-                const canvas = await _captureVoucherExact(emp);
-                const imgData = canvas.toDataURL('image/jpeg', 0.97);
-
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-
-                const PW = 210, PH = 297, MG = 5;
-                const usableW = PW - MG * 2;
-                const imgH = (canvas.height / canvas.width) * usableW;
-                const topY = Math.max(MG, (PH - imgH) / 2);
-
-                pdf.addImage(imgData, 'JPEG', MG, topY, usableW, Math.min(imgH, PH - MG * 2));
+                await new Promise(r => setTimeout(r, 60));
+                const pdf = buildVoucherPdf(emp);
                 pdf.save(fileName);
                 showToast(`Downloaded: ${fileName}`, 'success');
             } catch(e) {
                 console.error('PDF error:', e);
                 showToast('PDF failed: ' + e.message, 'error');
             } finally {
-                // Restore original employee
-                sel.value = origId;
-                renderA4Sheet();
-                card.classList.add('hidden');
+                if (card) card.classList.add('hidden');
             }
         }
 
@@ -2457,27 +2372,19 @@
             const fileName   = `Best_Force_Ltd_All_Vouchers_${shortMonth}_${APP_STATE.currentYear}.pdf`;
             const card = document.getElementById('pdf-progress-card');
             const text = document.getElementById('pdf-progress-text');
-            const sel  = document.getElementById('a4EmpSelect');
-            const origId = sel.value;
-            card.classList.remove('hidden');
-
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-            const PW = 210, PH = 297, MG = 5;
-            const usableW = PW - MG * 2;
+            if (card) card.classList.remove('hidden');
 
             try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+
                 for (let i = 0; i < APP_STATE.employees.length; i++) {
                     const emp = APP_STATE.employees[i];
-                    text.textContent = `Generating (${i+1}/${APP_STATE.employees.length}): ${emp.name}`;
-
-                    const canvas = await _captureVoucherExact(emp);
-                    const imgData = canvas.toDataURL('image/jpeg', 0.97);
-                    const imgH = (canvas.height / canvas.width) * usableW;
-                    const topY = Math.max(MG, (PH - imgH) / 2);
+                    if (text) text.textContent = `Generating (${i+1}/${APP_STATE.employees.length}): ${emp.name}`;
+                    await new Promise(r => setTimeout(r, 20));
 
                     if (i > 0) pdf.addPage('a4', 'portrait');
-                    pdf.addImage(imgData, 'JPEG', MG, topY, usableW, Math.min(imgH, PH - MG * 2));
+                    _drawVoucherOnPdf(pdf, emp);
                 }
 
                 pdf.save(fileName);
@@ -2486,9 +2393,7 @@
                 console.error('Batch PDF error:', e);
                 showToast('Batch PDF failed: ' + e.message, 'error');
             } finally {
-                sel.value = origId;
-                renderA4Sheet();
-                card.classList.add('hidden');
+                if (card) card.classList.add('hidden');
             }
         }
 
