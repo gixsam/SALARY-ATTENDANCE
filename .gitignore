@@ -1,0 +1,12 @@
+# Binaries and executables
+cloudflared.exe
+*.exe
+
+# Logs
+cloudflared.log
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
