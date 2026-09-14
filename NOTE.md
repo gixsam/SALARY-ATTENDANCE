@@ -11,7 +11,7 @@
 > **Technology Stack:** HTML5, Tailwind CSS, FontAwesome 6, xlsx-js-style, html2canvas, jsPDF, Vanilla JavaScript, Apache (.htaccess), Hostinger Cloud, Cloudflare Tunnel, GitHub Actions (CI/CD), Git & GitHub  
 > **Live Local Server:** `http://127.0.0.1:8080`  
 > **Live Cloudflare Tunnel:** `https://petroleum-echo-mirrors-rio.trycloudflare.com`  
-> **Last Synchronized:** 2026-09-14 16:05 Local Time  
+> **Last Synchronized:** 2026-09-14 16:45 Local Time  
 
 ---
 
@@ -181,6 +181,34 @@ D:\TECH\WEBSITE\SALARY ATTENDANCE\
     - Enhanced Single Voucher PDF download (`downloadSingleEmployeePdf()`).
     - Enhanced Batch 25-Voucher PDF download (`downloadAllEmployeesPdf()`).
     - Enhanced Monthly Payroll Summary PDF export (`downloadSummaryPdfDirect()`) to render the full official summary table on mobile devices.
+
+---
+
+### [Update 009] — Optical Text Centering, Balanced A4 Geometry & Mobile Cache Invalidation
+* **Date / Timestamp:** 2026-09-14 16:45 Local Time
+* **Primary Files Modified:** [`index.html`](file:///d:/TECH/WEBSITE/SALARY%20ATTENDANCE/index.html), [`.htaccess`](file:///d:/TECH/WEBSITE/SALARY%20ATTENDANCE/.htaccess), [`NOTE.md`](file:///d:/TECH/WEBSITE/SALARY%20ATTENDANCE/NOTE.md), [`salary_best_travel_ltd_upload.zip`](file:///d:/TECH/WEBSITE/SALARY%20ATTENDANCE/salary_best_travel_ltd_upload.zip)
+* **Summary of Changes:**
+  - **Optical Glyph & Character Centering in Downloaded PDF:**
+    - Diagnosed `html2canvas` typography rendering behavior: uppercase letters and digits have zero descender depth below the alphabetic baseline. When `line-height == height` is set without optical padding, `html2canvas` centers the total font em-box, shifting numbers (`02:00`, `13`, `32`) and letters (`A`) ~3px too close to the top border.
+    - Implemented calibrated optical top padding and baseline alignment across all PDF voucher elements:
+      - Attendance date & duty rows: `height: 24px; padding-top: 3.5px; line-height: 18px; font-size: 11px; vertical-align: top;`
+      - Table header (`<th>`): `height: 25px; padding-top: 4px; line-height: 18px; font-size: 11px;`
+      - Table footer summary (`<tfoot>`): `height: 24px; padding-top: 3.5px; line-height: 18px; font-size: 11px;`
+      - Employee Info header bar: `height: 27px; padding-top: 5px; line-height: 18px; font-size: 11.5px;`
+      - Financial breakdown boxes: `height: 21px; padding-top: 2px; line-height: 18px;`
+      - Executive Signatures section: `margin-top: 28px; padding-top: 5px;`
+    - Headless verification executed via Chrome DevTools Protocol (`captured_voucher_test.jpg` at 1985x2692): confirmed dead-center alignment horizontally and vertically across all 31 date rows, absent indicators, remarks, and headers.
+  - **Balanced A4 Proportions & Elimination of Bottom Margin Gap:**
+    - Standardized PDF geometry in `jsPDF`: `targetWidth = 200mm`, `targetHeight = 270mm`, `marginX = 5mm`, `topMargin = 13.5mm`, leaving an identical `13.5mm` bottom margin.
+    - The downloaded voucher now covers ~91% of the A4 height, matching the visual weight, proportions, and format of the live web view.
+  - **Mobile Safari & Chrome Cache Invalidation:**
+    - Configured Apache `.htaccess` directives (`max-age=0, no-cache, no-store, must-revalidate`, `Pragma: no-cache`, `Expires: Wed, 11 Jan 1984 05:00:00 GMT`) for all `.html` files.
+    - Embedded `<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">` and Pragma/Expires tags into `<head>` of `index.html`.
+    - Eliminates stale mobile caching so iOS Safari and Chrome always download the latest optical-centered voucher engine.
+  - **Triple-Sync Protocol Completed:**
+    - Local storage: `D:\TECH\WEBSITE\SALARY ATTENDANCE\`
+    - Google Drive mirror: `G:\My Drive\ALL WEBSITE WORKPLACE\BEST FORCE LTD SALARY ATTENDENCE\`
+    - GitHub repository: `https://github.com/gixsam/SALARY-ATTENDANCE.git` (`main` branch) triggering Hostinger automated deployment to `https://salary.best-travel.ltd`.
 
 ---
 
