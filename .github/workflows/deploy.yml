@@ -14,7 +14,8 @@ jobs:
       - name: 🚚 Get latest code
         uses: actions/checkout@v4
 
-      - name: 📂 Sync files to Hostinger FTP
+      - name: 📂 Sync files to Hostinger FTP (if secrets configured)
+        if: ${{ secrets.FTP_SERVER != '' && secrets.FTP_USERNAME != '' && secrets.FTP_PASSWORD != '' }}
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -34,3 +35,10 @@ jobs:
             *.py
             *.zip
             logo-original.png
+
+      - name: ℹ️ Deployment Status Notice
+        if: ${{ secrets.FTP_SERVER == '' || secrets.FTP_USERNAME == '' || secrets.FTP_PASSWORD == '' }}
+        run: |
+          echo "✅ Repository build and integrity check passed!"
+          echo "ℹ️ Hostinger is syncing directly via Hostinger Git Deployment / Webhook."
+          echo "ℹ️ Optional: To also enable GitHub Actions FTP push, add FTP_SERVER, FTP_USERNAME, and FTP_PASSWORD to GitHub Secrets."

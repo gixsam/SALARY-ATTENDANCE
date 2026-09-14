@@ -83,6 +83,7 @@
                     <div class="flex items-center gap-1.5">
                         <span class="text-[9px] bg-amber-500 text-slate-950 font-black px-1.5 py-0.2 rounded uppercase tracking-wider">BEST OUTSOURCING</span>
                         <h1 class="text-sm sm:text-base font-extrabold tracking-tight">Best Force Ltd.</h1>
+                        <span class="text-[9px] bg-emerald-500/20 text-emerald-300 font-mono font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">v2.0-PROD</span>
                     </div>
                     <p class="text-[10px] text-slate-400">Head Office • ZKTeco Attendance & Salary System</p>
                 </div>
@@ -1737,14 +1738,14 @@
                 empTable.style.width = '100%';
                 empTable.style.tableLayout = 'fixed';
                 empTable.style.borderCollapse = 'collapse';
-                empTable.style.marginBottom = '5px';
+                empTable.style.marginBottom = '6px';
                 empTable.style.border = '2px solid #0f172a';
                 empTable.querySelectorAll('tr').forEach(tr => {
-                    tr.style.height = '27px';
+                    tr.style.height = '28px';
                 });
                 empTable.querySelectorAll('td').forEach(td => {
-                    td.style.setProperty('height', '27px', 'important');
-                    td.style.setProperty('padding-top', '5px', 'important');
+                    td.style.setProperty('height', '28px', 'important');
+                    td.style.setProperty('padding-top', '5.5px', 'important');
                     td.style.setProperty('padding-bottom', '0px', 'important');
                     td.style.setProperty('padding-left', '2px', 'important');
                     td.style.setProperty('padding-right', '2px', 'important');
@@ -1767,8 +1768,8 @@
 
                 // thead th
                 attTable.querySelectorAll('thead th').forEach(th => {
-                    th.style.setProperty('height', '25px', 'important');
-                    th.style.setProperty('padding-top', '4px', 'important');
+                    th.style.setProperty('height', '26px', 'important');
+                    th.style.setProperty('padding-top', '4.5px', 'important');
                     th.style.setProperty('padding-bottom', '0px', 'important');
                     th.style.setProperty('line-height', '18px', 'important');
                     th.style.setProperty('font-size', '11px', 'important');
@@ -1781,11 +1782,11 @@
                 // tbody rows & td
                 const tbodyRows = attTable.querySelectorAll('tbody tr');
                 tbodyRows.forEach(tr => {
-                    tr.style.setProperty('height', '24px', 'important');
+                    tr.style.setProperty('height', '24.5px', 'important');
                     tr.style.setProperty('box-sizing', 'border-box', 'important');
                     tr.querySelectorAll('td').forEach(td => {
-                        td.style.setProperty('height', '24px', 'important');
-                        td.style.setProperty('padding-top', '3.5px', 'important');
+                        td.style.setProperty('height', '24.5px', 'important');
+                        td.style.setProperty('padding-top', '3.8px', 'important');
                         td.style.setProperty('padding-bottom', '0px', 'important');
                         td.style.setProperty('padding-left', '1px', 'important');
                         td.style.setProperty('padding-right', '1px', 'important');
@@ -1801,8 +1802,8 @@
 
                 // tfoot td
                 attTable.querySelectorAll('tfoot td').forEach(td => {
-                    td.style.setProperty('height', '24px', 'important');
-                    td.style.setProperty('padding-top', '3.5px', 'important');
+                    td.style.setProperty('height', '25px', 'important');
+                    td.style.setProperty('padding-top', '4px', 'important');
                     td.style.setProperty('padding-bottom', '0px', 'important');
                     td.style.setProperty('line-height', '18px', 'important');
                     td.style.setProperty('font-size', '11px', 'important');
@@ -1816,16 +1817,16 @@
             // 4. Duty & Salary Breakdown
             const breakdownGrid = clone.querySelector('.grid.grid-cols-2');
             if (breakdownGrid) {
-                breakdownGrid.style.marginTop = '5px';
-                breakdownGrid.style.marginBottom = '5px';
+                breakdownGrid.style.marginTop = '6px';
+                breakdownGrid.style.marginBottom = '6px';
                 const subTable = breakdownGrid.querySelector('table');
                 if (subTable) {
                     subTable.querySelectorAll('tr').forEach(tr => {
-                        tr.style.height = '21px';
+                        tr.style.height = '22px';
                     });
                     subTable.querySelectorAll('td').forEach(td => {
-                        td.style.height = '21px';
-                        td.style.paddingTop = '2px';
+                        td.style.height = '22px';
+                        td.style.paddingTop = '2.5px';
                         td.style.paddingBottom = '0px';
                         td.style.paddingLeft = '6px';
                         td.style.paddingRight = '6px';
@@ -1836,7 +1837,7 @@
                 }
                 const rightCard = breakdownGrid.children[1];
                 if (rightCard) {
-                    rightCard.style.padding = '4px 6px';
+                    rightCard.style.padding = '5px 8px';
                     rightCard.querySelectorAll('div').forEach(d => {
                         d.style.fontSize = '10.5px';
                     });
@@ -1852,8 +1853,8 @@
             // 5. Signature Lines Clearance
             const sigDiv = clone.querySelector('.grid.grid-cols-4');
             if (sigDiv) {
-                sigDiv.style.marginTop = '28px';
-                sigDiv.style.marginBottom = '4px';
+                sigDiv.style.marginTop = '32px';
+                sigDiv.style.marginBottom = '6px';
                 sigDiv.querySelectorAll('div > div').forEach(d => {
                     d.style.fontSize = '10px';
                     d.style.fontWeight = '800';
