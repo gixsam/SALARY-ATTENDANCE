@@ -180,7 +180,7 @@ D:\TECH\WEBSITE\SALARY ATTENDANCE\
 | Component | Status | Target / URI | Notes |
 |---|---|---|---|
 | **GitHub CI/CD** | ✅ Configured | `.github/workflows/deploy.yml` | Auto-deploys to Hostinger on push |
-| **Production Domain** | 🟡 Ready for Connect | `https://salary.best-travel.ltd` | DNS resolves to Hostinger (`2.57.91.130`) |
+| **Production Domain** | ✅ Live & Verified | `https://salary.best-travel.ltd` | Connected to Hostinger. Serving full app & logo.png |
 | **Hostinger Package** | ✅ Built | `salary_best_travel_ltd_upload.zip` | Available in Local & Google Drive |
 | **GitHub Repository** | ✅ Connected & Pushed | `https://github.com/gixsam/SALARY-ATTENDANCE` | Main branch synced |
 | **Local Web Server** | ✅ Active | `http://127.0.0.1:8080` | Running via PHP 8.3 CLI (Daemon Task 70) |
