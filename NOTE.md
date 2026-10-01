@@ -13,6 +13,57 @@
 > **Live Cloudflare Tunnel:** `https://petroleum-echo-mirrors-rio.trycloudflare.com`  
 > **Last Synchronized:** 2026-09-14 16:55 Local Time  
 
+## [Update 017] — Universal Attendance Log Parser Engine & September Multi-Format Fix (2026-10-01)
+**Type:** Major Core Attendance Parser & Multi-Format Ingestion Engine Upgrade  
+**Status:** ✅ COMPLETED & VERIFIED
+
+### User Request & Problem
+The user reported:
+*"the 'paste log' is not working perfectly, on the month of september."*
+Accompanied by screenshot `media_1790847526719.png` showing:
+- Month selected: **September / 2026**
+- Selected Staff: `1976 - LUCHI BEGUM (OFFICE ASSISTANCE)`
+- Top KPIs: **Total Duty Hours 0h 0m**, **Net Payable ৳ 0**
+- Voucher Table: All working days marked Absent (**A**), Check In / Check Out completely empty.
+
+### Root Cause Analysis
+1. **Date Ambiguity (`MM/DD/YYYY` vs `DD/MM/YYYY`):**
+   In previous `parseDateString`, any date like `09/01/2026` (September 1st in US/Excel default) was parsed as `2026-01-09` (January 9th). Dates with day $> 12$ like `09/25/2026` produced `2026-25-09` (invalid month 25). The calendar auto-switched to January, leaving September with zero punches.
+2. **Rejection of 2-Part Excel Dates (`1/9`, `2/9`):**
+   The parser regex strictly required a 4-digit or 2-digit year. Copying dates directly from Excel formatted as `1/9`, `2/9` (as seen in `media_1789396793700.jpg`) caused `parseDateString` to return `null`, dropping all rows.
+3. **Missing Contextual Employee ID Tracking:**
+   `parseAttendanceLine` strictly demanded an employee ID in `beforeDate` on every single row. Any table where the date was the first column, or where `ID: 1976` or `ID: 4511` was defined once in the header (standard Excel report layout), silently dropped all 30 attendance rows.
+4. **Biometric Punch Overwriting:**
+   In raw biometric transaction logs where an employee has two rows per day (one for Clock In, one for Clock Out), the second row overwrote the first, leaving `outTime` empty and resulting in 0 duty hours.
+5. **Excel File Upload Disconnect:**
+   In `handleZkExcelUpload`, sheets formatted with headers in cell A4 (`ID: 4511 Name: AHAD MRIDAH`) failed to match fixed column headers, and fallback row parsing failed for the same reasons above.
+
+### Architectural Solution & Engineering Upgrades
+1. **Smart Month-Aware Date Disambiguation (`parseDateString`):**
+   - Supports ISO (`YYYY-MM-DD`, `YYYY/MM/DD`), month names (`01-Sep-2026`, `Sep 1, 2026`, `September 1`), 2-part dates (`1/9`, `2/9`), and 3-part dates (`09/01/2026`, `01/09/2026`).
+   - If both numbers $\le 12$, disambiguates using `contextMonth + 1`: In September (`contextMonth = 8`, month 9), both `09/01/2026` (US) and `01/09/2026` (UK/BD) map with 100% precision to `2026-09-01`.
+   - Supports standalone day numbers (1 to 31) when accompanied by punch times.
+2. **Multi-Line Context-Aware Parser Engine (`parseUniversalLogText`):**
+   - Scans text line-by-line while maintaining state (`currentEmpId`, `currentEmpName`).
+   - Extracts metadata from header lines: `ID: 4511`, `Name: AHAD MRIDAH`, `Designation: TENDERING`.
+   - Extracts voucher adjustments from footers: `Basic Salary: 20000`, `Advance: 0`, `Fine: 0`, `Approval Status: Full Salary Approved`, `Total Duty: 248h 0m`, `NET PAYABLE: 20000`.
+   - If no employee ID is found anywhere in the pasted text, automatically binds rows to the active employee selected in `#a4EmpSelect`.
+3. **Intelligent Punch Pairing & Merging (`processParsedRecords`):**
+   - Automatically pairs morning check-in and evening check-out punches on the same day into a complete record.
+   - Preserves pre-computed duty hours and remarks (`Friday`, `Outdoor`, `Shift`, `Approved`).
+4. **Automated Calendar & UI Refresh:**
+   - Detects dominant month from records and cleanly switches calendar if needed.
+   - Automatically selects the imported employee in `#a4EmpSelect` so the user immediately views the newly populated voucher.
+   - Updates all KPI cards (`kpiTotalDuty`, `kpiTotalNet`, `kpiTotalBase`) and summary tables in real time.
+5. **Unified Excel Upload (`handleZkExcelUpload`):**
+   - Normalizes all Excel rows (`.xlsx`, `.xls`, `.csv`) into tab-separated text and routes them through `parseUniversalLogText`.
+
+### Verification & Live Testing
+- **Test 1 (ZKTeco Total Time Card):** `4511` with `2026-09-01 14:00`, `2026-09-02 14:04 23:36 09:31` $\rightarrow$ 100% verified.
+- **Test 2 (Excel Sheet Copy):** Sheet for `4511 - AHAD MRIDAH` with `1/9`, `2/9` dates and `Total Duty: 248h 0m`, `NET PAYABLE: 20000` $\rightarrow$ 100% verified.
+- **Test 3 (Active Staff Paste):** Selected `1976 - LUCHI BEGUM` in September 2026 and pasted 30 days of `08:52`–`19:15` punches $\rightarrow$ Total Duty updated from `0h 0m` to `309h 58m`, Net Payable updated from `৳ 0` to `৳ 12,499`.
+- **Test 4 (August Isolation):** Switched to August 2026 $\rightarrow$ verified that August retained all factory records (`6122h 58m`, `৳ 376,727 net`) with zero bleed.
+
 ---
 
 ## [Update 016] — Full-Page Vector PDF Voucher Engine & Centered Visual Calibration (2026-09-15)

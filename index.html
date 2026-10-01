@@ -601,8 +601,8 @@
                     <div class="h-px bg-slate-200 flex-1"></div>
                 </div>
 
-                <p class="text-slate-600 text-[11px]">Paste from Excel or ZKTeco (supports <b>Total Time Card</b> format):</p>
-                <textarea id="quickLogInput" rows="5" placeholder="Employee ID    First Name    Date          Clock In    Clock Out&#10;4511           Md. Ab. AHAD  2026-09-01    14:02       23:35&#10;18052                        2026-08-01    08:45       19:20" class="w-full p-2 font-mono text-[11px] border border-slate-300 rounded-lg bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                <p class="text-slate-600 text-[11px]">Paste from Excel, ZKTeco, or USB logs (supports <b>Total Time Card</b>, <b>Excel copy (1/9, 2/9)</b> & <b>Raw logs</b>):</p>
+                <textarea id="quickLogInput" rows="6" placeholder="Example 1 (ZKTeco Total Time Card):&#10;4511    Md. Ab. AHAD    2026-09-01    14:00&#10;4511    Md. Ab. AHAD    2026-09-02    14:04    23:36    09:31&#10;&#10;Example 2 (Excel Sheet Copy):&#10;ID: 1976    Name: LUCHI BEGUM&#10;1/9    08:52    19:15&#10;2/9    08:52    19:15" class="w-full p-2 font-mono text-[11px] border border-slate-300 rounded-lg bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
                 <div class="flex justify-end gap-2 pt-1">
                     <button type="button" onclick="closeModal('quickPasteModal')" class="px-3 py-1.5 border border-slate-300 rounded-lg">Cancel</button>
                     <button type="button" onclick="applyQuickZkLogs()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow">Apply & View Voucher</button>
@@ -1556,86 +1556,302 @@
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // SMART ZKTECO & "TOTAL TIME CARD" PARSER ENGINE (Update 013)
-        // Auto-detects ZKTeco Total Time Card format, dates, month/year switching
+        // SMART ZKTECO & UNIVERSAL ATTENDANCE PARSER ENGINE (Update 017)
+        // Auto-detects:
+        // 1. ZKTeco "Total Time Card" exports (.xlsx, .csv, tab/space copy-paste)
+        // 2. Excel multi-column attendance tables with 1/9, 2/9 dates & ID headers
+        // 3. Raw biometric punch logs (individual Clock In & Clock Out rows)
+        // 4. Standalone date/time lines associated with currently selected staff
+        // 5. Intelligent date disambiguation aware of currentMonth (September = 8)
+        // 6. Excel voucher summary footers (Basic Salary, Advance, Fine, Net, Approval Status)
         // ─────────────────────────────────────────────────────────────────────
 
-        function parseDateString(str) {
+        function parseDateString(str, contextMonth, contextYear) {
             if (!str) return null;
             if (str instanceof Date && !isNaN(str)) {
                 return str.toISOString().slice(0, 10);
             }
             str = String(str).trim();
-            // Match YYYY-MM-DD or YYYY/MM/DD
-            let m = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
-            if (m) return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
-            // Match DD-MM-YYYY or DD/MM/YYYY
-            m = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})/);
+            const curMo = contextMonth !== undefined ? contextMonth : APP_STATE.currentMonth;
+            const curYr = contextYear !== undefined ? contextYear : APP_STATE.currentYear;
+
+            // 1. ISO: YYYY-MM-DD or YYYY/MM/DD or YYYY.MM.DD
+            let m = str.match(/^(\d{4})[-/. ](\d{1,2})[-/. ](\d{1,2})/);
             if (m) {
-                let yr = m[3].length === 2 ? '20' + m[3] : m[3];
-                return `${yr}-${String(m[2]).padStart(2, '0')}-${String(m[1]).padStart(2, '0')}`;
+                return `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`;
             }
+
+            // 2. Month name: e.g. 01-Sep-2026, 1 Sep 2026, September 1, 2026, Sep-01-26
+            const months = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, sept:9, oct:10, nov:11, dec:12 };
+            let mText = str.match(/^(\d{1,2})[-/ ]+([A-Za-z]+)[-/ ]+(\d{2,4})/);
+            if (mText) {
+                let mo = months[mText[2].toLowerCase().slice(0, 3)];
+                if (mo) {
+                    let yr = mText[3].length === 2 ? '20' + mText[3] : mText[3];
+                    return `${yr}-${String(mo).padStart(2, '0')}-${String(mText[1]).padStart(2, '0')}`;
+                }
+            }
+            let mText2 = str.match(/^([A-Za-z]+)[-/ ]+(\d{1,2})[,/-]*\s*(\d{2,4})?/);
+            if (mText2) {
+                let mo = months[mText2[1].toLowerCase().slice(0, 3)];
+                if (mo) {
+                    let yr = mText2[3] ? (mText2[3].length === 2 ? '20' + mText2[3] : mText2[3]) : curYr;
+                    return `${yr}-${String(mo).padStart(2, '0')}-${String(mText2[2]).padStart(2, '0')}`;
+                }
+            }
+
+            // 3. Three-part numeric: DD-MM-YYYY, MM-DD-YYYY, DD/MM/YY
+            m = str.match(/^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{2,4})/);
+            if (m) {
+                let n1 = parseInt(m[1], 10);
+                let n2 = parseInt(m[2], 10);
+                let yr = m[3].length === 2 ? '20' + m[3] : m[3];
+                let day, mo;
+
+                if (n1 > 12) {
+                    day = n1; mo = n2;
+                } else if (n2 > 12) {
+                    day = n2; mo = n1;
+                } else {
+                    // Both <= 12: disambiguate using active contextMonth (0-indexed: Sept = 8 => mo = 9)
+                    const targetMo = curMo + 1;
+                    if (n1 === targetMo && n2 !== targetMo) {
+                        mo = n1; day = n2; // MM/DD/YYYY
+                    } else if (n2 === targetMo && n1 !== targetMo) {
+                        day = n1; mo = n2; // DD/MM/YYYY
+                    } else {
+                        day = n1; mo = n2; // Default to international DD/MM/YYYY
+                    }
+                }
+                return `${yr}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            }
+
+            // 4. Two-part numeric: D/M or DD/MM (e.g. 1/9, 2/9, 02/09)
+            m = str.match(/^(\d{1,2})[-/. ](\d{1,2})$/);
+            if (m) {
+                let n1 = parseInt(m[1], 10);
+                let n2 = parseInt(m[2], 10);
+                let day, mo;
+                if (n1 > 12) {
+                    day = n1; mo = n2;
+                } else if (n2 > 12) {
+                    day = n2; mo = n1;
+                } else {
+                    const targetMo = curMo + 1;
+                    if (n2 === targetMo) {
+                        day = n1; mo = n2;
+                    } else if (n1 === targetMo) {
+                        mo = n1; day = n2;
+                    } else {
+                        day = n1; mo = n2;
+                    }
+                }
+                return `${curYr}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            }
+
             return null;
         }
 
-        function parseAttendanceLine(line) {
+        function parseAttendanceLine(line, activeEmpId) {
             line = line.trim();
             if (!line) return null;
             const lower = line.toLowerCase();
-            if (lower.includes('total time card') || lower.includes('employee id') || lower.includes('clock in')) {
-                return null; // Header row
+            if (lower.includes('total time card') || lower.includes('employee id') || lower.includes('clock in') || (lower.includes('check in') && lower.includes('check out'))) {
+                return null;
             }
 
-            // Check if line contains a recognizable date
-            const dateMatch = line.match(/\b(\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\b/);
-            if (!dateMatch) return null;
+            const fallbackId = activeEmpId || document.getElementById('a4EmpSelect')?.value || (APP_STATE.employees[0] ? APP_STATE.employees[0].id : '18052');
 
-            const rawDate = dateMatch[1];
-            const dateStr = parseDateString(rawDate);
+            // Find date token in line
+            const dateRegex = /\b(\d{4}[-/.]\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}|\d{1,2}[-/.]\d{1,2}|\d{1,2}[-/ ]+[A-Za-z]+[-/ ]+\d{2,4})\b/;
+            const dateMatch = line.match(dateRegex);
+
+            let rawDate = null, dateStr = null, datePos = -1;
+            if (dateMatch) {
+                rawDate = dateMatch[1];
+                dateStr = parseDateString(rawDate);
+                datePos = line.indexOf(rawDate);
+            } else {
+                // Check if line starts with standalone day 1-31
+                const dayStartMatch = line.match(/^(\d{1,2})(?:st|nd|rd|th)?[\t\s]+/);
+                if (dayStartMatch) {
+                    const dayNum = parseInt(dayStartMatch[1], 10);
+                    if (dayNum >= 1 && dayNum <= 31) {
+                        rawDate = dayStartMatch[1];
+                        const mo = String(APP_STATE.currentMonth + 1).padStart(2, '0');
+                        dateStr = `${APP_STATE.currentYear}-${mo}-${String(dayNum).padStart(2, '0')}`;
+                        datePos = 0;
+                    }
+                }
+            }
+
             if (!dateStr) return null;
 
-            const datePos = line.indexOf(rawDate);
-            const beforeDate = line.substring(0, datePos).trim();
+            const beforeDate = datePos > 0 ? line.substring(0, datePos).trim() : '';
             const afterDate = line.substring(datePos + rawDate.length).trim();
 
-            // Extract ID (first numeric token in beforeDate)
-            const idMatch = beforeDate.match(/\b(\d+)\b/);
-            if (!idMatch) return null;
-            const id = idMatch[1];
+            let id = fallbackId;
+            let name = '';
 
-            // Extract employee name if present (between ID and date)
-            const namePart = beforeDate.replace(idMatch[1], '').trim();
+            if (beforeDate) {
+                const idMatch = beforeDate.match(/\b(\d{2,6})\b/);
+                if (idMatch) {
+                    id = idMatch[1];
+                    name = beforeDate.replace(idMatch[0], '').trim();
+                }
+            }
 
-            // Extract Clock In and Clock Out (times in afterDate)
-            const timeMatches = afterDate.match(/\b\d{1,2}:\d{2}\b/g) || [];
-            const inTime = timeMatches[0] || '';
-            const outTime = timeMatches[1] || '';
+            const timeMatches = (afterDate || line).match(/\b(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?\b/g) || [];
+            let inTime = '', outTime = '';
+            if (timeMatches.length >= 2) {
+                inTime = timeMatches[0].slice(0, 5);
+                outTime = timeMatches[1].slice(0, 5);
+            } else if (timeMatches.length === 1) {
+                inTime = timeMatches[0].slice(0, 5);
+            }
 
-            return { id, name: namePart, dateStr, inTime, outTime };
+            let forceHours = undefined, forceMinutes = undefined, remarks = '';
+            if (lower.includes('friday')) remarks = 'Friday';
+            else if (lower.includes('outdoor')) remarks = 'Outdoor Duty';
+            else if (lower.includes('meeting')) remarks = 'Meeting';
+            else if (lower.includes('approved')) remarks = 'Approved';
+            else if (lower.includes('shift')) {
+                const sm = line.match(/\b(\d+h\s*shift|\d+\s*shift)\b/i);
+                if (sm) remarks = sm[1];
+            }
+
+            let remAfter = afterDate;
+            timeMatches.forEach(tm => { remAfter = remAfter.replace(tm, ' '); });
+            remAfter = remAfter.replace(/\b(friday|outdoor|meeting|approved|shift|abs|a|present|p)\b/gi, ' ');
+            const numTokens = remAfter.match(/\b\d+(?:\.\d+)?\b/g);
+            if (numTokens && numTokens.length >= 2 && !outTime) {
+                forceHours = parseFloat(numTokens[0]);
+                forceMinutes = parseFloat(numTokens[1]);
+            } else if (numTokens && numTokens.length === 1 && !outTime && lower.includes('friday')) {
+                forceHours = parseFloat(numTokens[0]);
+            }
+
+            return { id, name, dateStr, inTime, outTime, forceHours, forceMinutes, remarks };
         }
 
-        function processParsedRecords(records) {
+        function parseUniversalLogText(text, activeEmpId, activeMonth, activeYear) {
+            if (!text || !text.trim()) return { records: [], metaUpdates: {}, processedEmployees: [] };
+
+            const curMo = activeMonth !== undefined ? activeMonth : APP_STATE.currentMonth;
+            const curYr = activeYear !== undefined ? activeYear : APP_STATE.currentYear;
+            let currentEmpId = activeEmpId || document.getElementById('a4EmpSelect')?.value || (APP_STATE.employees[0] ? APP_STATE.employees[0].id : '18052');
+            let currentEmpName = '';
+            const records = [];
+            const metaUpdates = {};
+
+            function getMeta(id) {
+                if (!metaUpdates[id]) metaUpdates[id] = {};
+                return metaUpdates[id];
+            }
+
+            const lines = text.split(/\r?\n/);
+
+            for (let rawLine of lines) {
+                const line = rawLine.trim();
+                if (!line) continue;
+                const lower = line.toLowerCase();
+
+                // 1. Employee ID header line: "ID: 4511", "Employee ID: 1976"
+                const idHeaderMatch = line.match(/\b(?:id|emp(?:loyee)?\s*id|staff\s*id)\s*[:=\t\s]+\s*([0-9]+)\b/i);
+                if (idHeaderMatch) {
+                    currentEmpId = idHeaderMatch[1];
+                    const nameMatch = line.match(/\b(?:name|nam)\s*[:=\t\s]+\s*([A-Za-z.\s]+?)(?=\s+(?:desig|dept|designation|id|$|\t))/i);
+                    if (nameMatch) {
+                        currentEmpName = nameMatch[1].trim();
+                        getMeta(currentEmpId).name = currentEmpName;
+                    }
+                    const desigMatch = line.match(/\b(?:desig|dept|designation)\s*[:=\t\s]+\s*([A-Za-z.\s]+?)(?=$|\t)/i);
+                    if (desigMatch) {
+                        getMeta(currentEmpId).dept = desigMatch[1].trim();
+                    }
+                    continue;
+                }
+
+                // 2. Standalone Name line
+                const loneNameMatch = line.match(/^(?:name|nam)\s*[:=\t\s]+\s*([A-Za-z.\s]+)/i);
+                if (loneNameMatch && currentEmpId) {
+                    currentEmpName = loneNameMatch[1].trim();
+                    getMeta(currentEmpId).name = currentEmpName;
+                    continue;
+                }
+
+                // 3. Financial adjustments in voucher footers
+                const basicMatch = line.match(/\b(?:basic(?:\s*salary)?|base(?:\s*pay)?)\s*[:=\t\s]+\s*([0-9,]+)/i);
+                if (basicMatch && currentEmpId) {
+                    getMeta(currentEmpId).basicSalary = parseFloat(basicMatch[1].replace(/,/g, ''));
+                }
+
+                const advMatch = line.match(/\badvance\s*[:=\t\s]+\s*([0-9,]+)/i);
+                if (advMatch && currentEmpId) {
+                    getMeta(currentEmpId).advance = parseFloat(advMatch[1].replace(/,/g, ''));
+                }
+
+                const fineMatch = line.match(/\bfine\s*[:=\t\s]+\s*([0-9,]+)/i);
+                if (fineMatch && currentEmpId) {
+                    getMeta(currentEmpId).fine = parseFloat(fineMatch[1].replace(/,/g, ''));
+                }
+
+                const noteMatch = line.match(/\b(?:approval\s*status|status|approval\s*note)\s*[:=\t\s]+([A-Za-z0-9\s]+?)(?=\s+(?:net|total|$|\t))/i);
+                if (noteMatch && currentEmpId) {
+                    getMeta(currentEmpId).approvalNote = noteMatch[1].trim();
+                }
+
+                const netMatch = line.match(/\bnet(?:\s*payable)?\s*[:=\t\s]+\s*([0-9,]+)/i);
+                if (netMatch && currentEmpId) {
+                    getMeta(currentEmpId).overrideNet = parseFloat(netMatch[1].replace(/,/g, ''));
+                }
+
+                const dutyTotalMatch = line.match(/\btotal\s*duty\s*[:=\t\s]+\s*([0-9]+)h(?:\s*([0-9]+)m)?/i);
+                if (dutyTotalMatch && currentEmpId) {
+                    let h = parseFloat(dutyTotalMatch[1]) || 0;
+                    let m = parseFloat(dutyTotalMatch[2]) || 0;
+                    getMeta(currentEmpId).overrideDutyHours = h + (m / 60);
+                }
+
+                if (lower.includes('total time card') || lower.includes('clock in') || (lower.includes('check in') && lower.includes('check out'))) {
+                    continue;
+                }
+
+                // 4. Attendance row parsing
+                const rec = parseAttendanceLine(line, currentEmpId);
+                if (rec) {
+                    if (rec.id) currentEmpId = rec.id;
+                    if (rec.name && !currentEmpName) currentEmpName = rec.name;
+                    records.push(rec);
+                }
+            }
+
+            const uniqueEmpIds = [...new Set(records.map(r => r.id))];
+            return { records, metaUpdates, processedEmployees: uniqueEmpIds };
+        }
+
+        function processParsedRecords(records, metaUpdates, processedEmployees) {
             if (!records || records.length === 0) {
-                showToast('No valid attendance records found', 'error');
+                showToast('No valid attendance records found in the pasted data', 'error');
                 return;
             }
 
-            let count = 0;
+            let punchCount = 0;
             const monthCounts = {};
 
             records.forEach(r => {
                 if (!r || !r.id || !r.dateStr) return;
-                
-                // Track months to auto-switch calendar
+
                 const parts = r.dateStr.split('-');
                 if (parts.length >= 2) {
                     const key = `${parts[0]}-${parts[1]}`;
                     monthCounts[key] = (monthCounts[key] || 0) + 1;
                 }
 
-                // If this is a new staff not in current list, auto-register
-                if (!APP_STATE.employees.some(e => e.id === r.id)) {
-                    APP_STATE.employees.push({
+                // Auto-register staff if not present
+                let emp = APP_STATE.employees.find(e => e.id === r.id);
+                if (!emp) {
+                    emp = {
                         id: r.id,
                         name: r.name ? r.name.toUpperCase() : `STAFF ${r.id}`,
                         dept: 'STAFF',
@@ -1643,29 +1859,59 @@
                         advance: 0,
                         fine: 0,
                         approvalNote: 'Imported ZKTeco'
-                    });
+                    };
+                    APP_STATE.employees.push(emp);
                 }
 
-                // Store punch in attendance logs
-                APP_STATE.attendanceLogs[`${r.id}_${r.dateStr}`] = {
-                    inTime: r.inTime || '',
-                    outTime: r.outTime || '',
-                    remarks: ''
-                };
-                count++;
+                // Intelligent merge of punches on same day
+                const logKey = `${r.id}_${r.dateStr}`;
+                const existing = APP_STATE.attendanceLogs[logKey];
+
+                if (existing) {
+                    if (r.inTime && !existing.inTime) {
+                        existing.inTime = r.inTime;
+                    } else if (r.inTime && existing.inTime && !existing.outTime) {
+                        if (r.inTime > existing.inTime) {
+                            existing.outTime = r.inTime;
+                        } else {
+                            existing.outTime = existing.inTime;
+                            existing.inTime = r.inTime;
+                        }
+                    }
+                    if (r.outTime) {
+                        existing.outTime = r.outTime;
+                    }
+                    if (r.forceHours !== undefined) existing.forceHours = r.forceHours;
+                    if (r.forceMinutes !== undefined) existing.forceMinutes = r.forceMinutes;
+                    if (r.remarks) existing.remarks = r.remarks;
+                } else {
+                    APP_STATE.attendanceLogs[logKey] = {
+                        inTime: r.inTime || '',
+                        outTime: r.outTime || '',
+                        forceHours: r.forceHours,
+                        forceMinutes: r.forceMinutes,
+                        remarks: r.remarks || ''
+                    };
+                }
+                punchCount++;
             });
 
-            // Auto-detect dominant month and year
+            // Auto-detect dominant month & year from parsed records
             let bestKey = null, maxCount = 0;
             for (let k in monthCounts) {
                 if (monthCounts[k] > maxCount) { maxCount = monthCounts[k]; bestKey = k; }
             }
 
+            let targetMonth = APP_STATE.currentMonth;
+            let targetYear = APP_STATE.currentYear;
             let monthNotice = '';
+
             if (bestKey) {
                 const [bestY, bestM] = bestKey.split('-');
                 const mIdx = parseInt(bestM, 10) - 1;
                 const yVal = parseInt(bestY, 10);
+                targetMonth = mIdx;
+                targetYear = yVal;
                 if (mIdx !== APP_STATE.currentMonth || yVal !== APP_STATE.currentYear) {
                     APP_STATE.currentMonth = mIdx;
                     APP_STATE.currentYear = yVal;
@@ -1677,19 +1923,51 @@
                 }
             }
 
+            // Apply any financial / voucher meta updates to the active month
+            if (metaUpdates) {
+                for (let empId in metaUpdates) {
+                    const meta = metaUpdates[empId];
+                    const emp = APP_STATE.employees.find(e => e.id === empId);
+                    if (emp) {
+                        if (meta.name) emp.name = meta.name.toUpperCase();
+                        if (meta.dept) emp.dept = meta.dept.toUpperCase();
+                        if (meta.basicSalary) emp.basicSalary = meta.basicSalary;
+
+                        const monthlyUpdates = {};
+                        if (meta.advance !== undefined) monthlyUpdates.advance = meta.advance;
+                        if (meta.fine !== undefined) monthlyUpdates.fine = meta.fine;
+                        if (meta.approvalNote) monthlyUpdates.approvalNote = meta.approvalNote;
+                        if (meta.overrideDutyHours !== undefined) monthlyUpdates.overrideDutyHours = meta.overrideDutyHours;
+                        if (meta.overrideNet !== undefined) monthlyUpdates.overrideNet = meta.overrideNet;
+
+                        setEmpMonthData(emp, targetYear, targetMonth, monthlyUpdates);
+                    }
+                }
+            }
+
             renderEmployeeSelect();
+
+            // Auto-select the imported employee in the dropdown
+            const activeProcessed = processedEmployees || [...new Set(records.map(r => r.id))];
+            if (activeProcessed.length > 0) {
+                const a4Sel = document.getElementById('a4EmpSelect');
+                if (a4Sel && (!activeProcessed.includes(a4Sel.value) || activeProcessed.length === 1)) {
+                    a4Sel.value = activeProcessed[0];
+                }
+            }
+
             updateCalculationsAndTables();
             saveStateToStorage();
-            showToast(`Processed ${count} punches successfully!${monthNotice}`, 'success');
+
+            const staffCount = activeProcessed.length;
+            const staffMsg = staffCount === 1 ? `staff ${activeProcessed[0]}` : `${staffCount} staff members`;
+            showToast(`Processed ${punchCount} punches for ${staffMsg} successfully!${monthNotice}`, 'success');
         }
 
         function processRawLogText(text) {
-            const records = [];
-            text.trim().split(/\r?\n/).forEach(line => {
-                const rec = parseAttendanceLine(line);
-                if (rec) records.push(rec);
-            });
-            processParsedRecords(records);
+            const activeId = document.getElementById('a4EmpSelect')?.value || (APP_STATE.employees[0] ? APP_STATE.employees[0].id : '18052');
+            const { records, metaUpdates, processedEmployees } = parseUniversalLogText(text, activeId, APP_STATE.currentMonth, APP_STATE.currentYear);
+            processParsedRecords(records, metaUpdates, processedEmployees);
         }
 
         function handleZkExcelUpload(event, source) {
@@ -1701,59 +1979,31 @@
                 try {
                     const data = new Uint8Array(e.target.result);
                     const wb = XLSX.read(data, { type: 'array', cellDates: true });
-                    const records = [];
+                    let fullText = '';
 
                     wb.SheetNames.forEach(sheetName => {
                         const ws = wb.Sheets[sheetName];
                         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-
-                        let idCol = -1, nameCol = -1, dateCol = -1, inCol = -1, outCol = -1;
-
-                        // Scan for header row
-                        for (let r = 0; r < Math.min(rows.length, 10); r++) {
-                            const row = rows[r];
-                            if (!Array.isArray(row)) continue;
-                            for (let c = 0; c < row.length; c++) {
-                                const val = String(row[c] || '').toLowerCase().trim();
-                                if (val.includes('employee id') || val === 'id' || val === 'emp id') idCol = c;
-                                if (val.includes('first name') || val.includes('name')) nameCol = c;
-                                if (val === 'date' || val.includes('attendance date')) dateCol = c;
-                                if (val.includes('clock in') || val === 'in time' || val === 'check in' || val === 'in') inCol = c;
-                                if (val.includes('clock out') || val === 'out time' || val === 'check out' || val === 'out') outCol = c;
-                            }
-                            if (dateCol !== -1 && idCol !== -1) break;
-                        }
-
                         rows.forEach(row => {
-                            if (!Array.isArray(row)) return;
-                            let id = '', name = '', dateStr = '', inTime = '', outTime = '';
-                            if (idCol !== -1 && dateCol !== -1) {
-                                id = String(row[idCol] || '').trim();
-                                name = nameCol !== -1 ? String(row[nameCol] || '').trim() : '';
-                                dateStr = parseDateString(row[dateCol]);
-                                inTime = inCol !== -1 ? String(row[inCol] || '').trim() : '';
-                                outTime = outCol !== -1 ? String(row[outCol] || '').trim() : '';
-                            } else {
-                                // Fallback: join row with tabs and use line parser
-                                const fallbackRec = parseAttendanceLine(row.join('\t'));
-                                if (fallbackRec) {
-                                    id = fallbackRec.id;
-                                    name = fallbackRec.name;
-                                    dateStr = fallbackRec.dateStr;
-                                    inTime = fallbackRec.inTime;
-                                    outTime = fallbackRec.outTime;
-                                }
-                            }
-
-                            if (id && dateStr && /^\d+$/.test(id)) {
-                                records.push({ id, name, dateStr, inTime, outTime });
+                            if (Array.isArray(row)) {
+                                const line = row.map(cell => {
+                                    if (cell instanceof Date && !isNaN(cell)) {
+                                        return cell.toISOString().slice(0, 10);
+                                    }
+                                    return String(cell != null ? cell : '').trim();
+                                }).join('\t').trim();
+                                if (line) fullText += line + '\n';
                             }
                         });
                     });
 
-                    processParsedRecords(records);
-                    if (source === 'quick') closeModal('quickPasteModal');
-                    switchTab('tab-a4');
+                    if (fullText.trim()) {
+                        processRawLogText(fullText);
+                        if (source === 'quick') closeModal('quickPasteModal');
+                        switchTab('tab-a4');
+                    } else {
+                        showToast('Excel sheet appears to be empty', 'error');
+                    }
                 } catch (err) {
                     console.error('Excel upload error:', err);
                     showToast('Failed to parse Excel file: ' + err.message, 'error');
