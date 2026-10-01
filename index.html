@@ -1251,41 +1251,70 @@
                 const c = calcTime(log.inTime, log.outTime);
 
                 let rCls = 'bg-white', rem = log.remarks || '', abs = '', rowH = '', rowM = '';
+                // Track if hours come from off-day credit (Friday/holiday) vs real/forced punch
+                let isCreditHour = false;
+                // Track half-punch (check-in without check-out)
+                let isHalfPunch = false;
 
                 if (isF || hol) {
                     rCls = isF ? 'bg-friday' : 'bg-holiday';
                     rem = rem || (isF ? 'Friday' : hol);
                     if (log.forceHours !== undefined) {
+                        // Explicitly forced hours on a Friday (e.g. duty day)
                         rowH = log.forceHours;
-                        rowM = log.forceMinutes > 0 ? log.forceMinutes : '';
+                        rowM = log.forceMinutes > 0 ? log.forceMinutes : '0';
                         tMin += (log.forceHours * 60 + (log.forceMinutes || 0));
                     } else {
+                        // Auto off-day credit — show in muted style, don't count absent
                         let cred = getOffDayCredit(emp.id, d, tDays);
                         tMin += cred * 60;
-                        if(cred > 0) rowH = cred;
+                        if (cred > 0) { rowH = cred; rowM = '0'; isCreditHour = true; }
                     }
                 } else if (log.forceHours !== undefined) {
                     rowH = log.forceHours;
-                    rowM = log.forceMinutes > 0 ? log.forceMinutes : '';
+                    rowM = log.forceMinutes > 0 ? log.forceMinutes : '0';
                     tMin += (log.forceHours * 60 + (log.forceMinutes || 0));
-                    rCls = (log.forceHours === 0 && (!log.forceMinutes || log.forceMinutes === 0) && !c.tm) ? 'bg-absent' : 'bg-white';
-                    abs = (rCls === 'bg-absent') ? 'A' : '';
+                    const isAbsForced = (log.forceHours === 0 && (!log.forceMinutes || log.forceMinutes === 0) && !c.tm);
+                    rCls = isAbsForced ? 'bg-absent' : 'bg-white';
+                    abs = isAbsForced ? 'A' : '';
                     if (abs === 'A') absentCount++;
-                } else if (!log.inTime || !log.outTime || c.tm===0) {
+                } else if (log.inTime && !log.outTime) {
+                    // Half-punch: has check-in but no check-out
+                    isHalfPunch = true;
+                    rCls = 'bg-yellow-50';
+                    abs = '½';
+                    rowH = ''; rowM = '';
+                    absentCount++;
+                } else if (!log.inTime || !log.outTime || c.tm === 0) {
                     absentCount++;
                     rCls = 'bg-absent'; abs = 'A';
                 } else {
-                    tMin += c.tm; rowH = c.h>0?c.h:'0'; rowM = c.m>0?c.m:'';
+                    tMin += c.tm;
+                    rowH = c.h > 0 ? c.h : '0';
+                    rowM = c.m > 0 ? c.m : '0';
                 }
 
+                // Style helpers for HOUR/MINUTE cells
+                const hrStyle  = isCreditHour
+                    ? 'color:#94a3b8;font-style:italic;'   // muted for auto off-day credit
+                    : (abs === 'A' ? 'color:#ef4444;' : '');
+                const hrCls    = `border-r border-slate-300 font-mono font-black`;
+                const checkInDisplay  = isHalfPunch
+                    ? formatTime12(log.inTime || '')        // keep the partial check-in visible
+                    : formatTime12(c.di || log.inTime || '');
+                const checkOutDisplay = formatTime12(c.do || log.outTime || '');
+                const absStyle = abs === '½'
+                    ? 'color:#d97706;font-weight:900;'      // amber for half-punch
+                    : 'color:#ef4444;font-weight:900;';
+
                 rows += `<tr class="${rCls} border-b border-slate-300 text-[8.5px] sm:text-[9.5px]">
-                    <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono font-bold">${d}/${APP_STATE.currentMonth+1}/${String(APP_STATE.currentYear).slice(-2)}</td>
-                    <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono">${formatTime12(c.di||log.inTime||'')}</td>
-                    <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono">${formatTime12(c.do||log.outTime||'')}</td>
-                    <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono font-black">${rowH}</td>
-                    <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono font-black">${rowM}</td>
-                    <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-black text-red-600">${abs}</td>
-                    <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="font-medium whitespace-nowrap overflow-hidden text-ellipsis px-0.5 text-[8px] sm:text-[8.5px]">${rem}</td>
+                    <td align="center" style="text-align:center!important;vertical-align:middle!important;" class="border-r border-slate-300 font-mono font-bold">${d}/${APP_STATE.currentMonth+1}/${String(APP_STATE.currentYear).slice(-2)}</td>
+                    <td align="center" style="text-align:center!important;vertical-align:middle!important;" class="border-r border-slate-300 font-mono">${checkInDisplay}</td>
+                    <td align="center" style="text-align:center!important;vertical-align:middle!important;" class="border-r border-slate-300 font-mono">${checkOutDisplay}</td>
+                    <td align="center" style="text-align:center!important;vertical-align:middle!important;${hrStyle}" class="${hrCls}">${rowH}</td>
+                    <td align="center" style="text-align:center!important;vertical-align:middle!important;${hrStyle}" class="border-r border-slate-300 font-mono font-black">${rowM}</td>
+                    <td align="center" style="text-align:center!important;vertical-align:middle!important;${abs ? absStyle : ''}" class="border-r border-slate-300 font-black">${abs}</td>
+                    <td align="center" style="text-align:center!important;vertical-align:middle!important;" class="font-medium whitespace-nowrap overflow-hidden text-ellipsis px-0.5 text-[8px] sm:text-[8.5px]">${rem}</td>
                 </tr>`;
             }
 
@@ -1342,15 +1371,24 @@
                         </thead>
                         <tbody>${rows}</tbody>
                         <tfoot class="bg-slate-100 font-black border-t-2 border-slate-900 text-[8px] sm:text-[9.5px]">
-                            <tr>
+                        <tr>
                                 <td align="center" style="text-align: center !important;" colspan="3" class="border-r border-slate-400 font-bold">Total:</td>
-                                <td align="center" style="text-align: center !important;" class="border-r border-slate-400 font-mono">${tHrs}</td>
+                                <td align="center" style="text-align: center !important;" class="border-r border-slate-400 font-mono">${tHrs}${monthData.overrideDutyHours !== undefined ? '*' : ''}</td>
                                 <td align="center" style="text-align: center !important;" class="border-r border-slate-400 font-mono">${rMin}</td>
                                 <td align="center" style="text-align: center !important;" class="border-r border-slate-400 font-mono text-red-600">${absentCount>0?absentCount:''}</td>
                                 <td align="center" style="text-align: center !important;" class="font-normal text-slate-500">Verified</td>
                             </tr>
                         </tfoot>
                     </table>
+                </div>
+
+                <!-- Legend strip -->
+                <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-[7px] sm:text-[8px] text-slate-500 mb-1 px-0.5">
+                    <span><span class="inline-block w-2 h-2 rounded-sm bg-friday border border-slate-300 mr-0.5"></span>Friday/Off-day (italic hr = auto credit)</span>
+                    <span><span class="inline-block w-2 h-2 rounded-sm bg-yellow-50 border border-yellow-300 mr-0.5"></span><span style="color:#d97706;font-weight:900;">½</span> = Missing check-out (half punch)</span>
+                    <span><span class="inline-block w-2 h-2 rounded-sm bg-absent border border-red-300 mr-0.5"></span>A = Absent</span>
+                    <span style="color:#94a3b8;font-style:italic;">italic hr = off-day credit (not punched)</span>
+                    ${monthData.overrideDutyHours !== undefined ? '<span class="text-indigo-600 font-bold">* = Total hours overridden</span>' : ''}
                 </div>
 
                 <!-- Duty & Salary Breakdown -->
@@ -2475,35 +2513,43 @@
 
                 let bg = C.white, absT = '', rH = '', rM = '', rem = log.remarks || '';
                 let absC = C.black;
+                let isCreditHourPdf = false, isHalfPunchPdf = false;
 
                 if (isF || hol) {
                     bg = isF ? C.friday : C.holiday;
                     rem = rem || (isF ? 'Friday' : hol);
                     if (log.forceHours !== undefined) {
-                        rH = log.forceHours; rM = log.forceMinutes > 0 ? log.forceMinutes : '';
+                        rH = log.forceHours; rM = log.forceMinutes > 0 ? log.forceMinutes : '0';
                         tMin += (log.forceHours * 60 + (log.forceMinutes || 0));
                     } else {
                         let cred = getOffDayCredit(emp.id, d, tDays);
-                        tMin += cred * 60; if (cred > 0) rH = cred;
+                        tMin += cred * 60;
+                        if (cred > 0) { rH = cred; rM = '0'; isCreditHourPdf = true; }
                     }
                 } else if (log.forceHours !== undefined) {
-                    rH = log.forceHours; rM = log.forceMinutes > 0 ? log.forceMinutes : '';
+                    rH = log.forceHours; rM = log.forceMinutes > 0 ? log.forceMinutes : '0';
                     tMin += (log.forceHours * 60 + (log.forceMinutes || 0));
                     if (log.forceHours === 0 && (!log.forceMinutes || log.forceMinutes === 0) && !c.tm) {
                         bg = C.absent; absT = 'A'; absC = C.red; absentCount++;
                     }
+                } else if (log.inTime && !log.outTime) {
+                    // Half-punch
+                    isHalfPunchPdf = true;
+                    bg = [255, 254, 230]; absT = '\u00BD'; absC = [217, 119, 6]; absentCount++;
                 } else if (!log.inTime || !log.outTime || c.tm === 0) {
                     bg = C.absent; absT = 'A'; absC = C.red; absentCount++;
                 } else {
-                    tMin += c.tm; rH = c.h > 0 ? c.h : '0'; rM = c.m > 0 ? c.m : '';
+                    tMin += c.tm; rH = c.h > 0 ? c.h : '0'; rM = c.m > 0 ? c.m : '0';
                 }
 
                 const dLabel = d + '/' + (APP_STATE.currentMonth + 1) + '/' + String(APP_STATE.currentYear).slice(-2);
+                const pdfCheckIn  = isHalfPunchPdf ? formatTime12(log.inTime || '') : formatTime12(c.di || log.inTime || '');
+                const pdfCheckOut = formatTime12(c.do || log.outTime || '');
                 let rx = ML;
                 fillRect(rx, Y, CW, RH, bg);
                 draw(C.sl300); lw(0.15);
 
-                const vals = [dLabel, formatTime12(c.di || log.inTime || ''), formatTime12(c.do || log.outTime || ''), rH, rM, absT, rem];
+                const vals = [dLabel, pdfCheckIn, pdfCheckOut, rH, rM, absT, rem];
                 COL.forEach((col, i) => {
                     pdf.rect(rx, Y, col.w, RH, 'S');
                     const v = vals[i];
@@ -2511,7 +2557,14 @@
                         const s = i === 6 ? 7.5 : 8.5;
                         pdf.setFontSize(s);
                         pdf.setFont('helvetica', (i === 0 || (i >= 3 && i <= 5)) ? 'bold' : 'normal');
-                        ink(i === 5 ? absC : C.black);
+                        // Colour logic: credit hours → grey italic, half-punch abs → amber, abs → red, else black
+                        if (i === 5) {
+                            ink(absC);  // Abs column uses absC (red or amber)
+                        } else if (isCreditHourPdf && (i === 3 || i === 4)) {
+                            ink([148, 163, 184]); // slate-400 muted for credit hours
+                        } else {
+                            ink(C.black);
+                        }
                         const xp = rx + col.w / 2;
                         const yp = Y + RH / 2 + s * 0.18;
                         let t = String(v);

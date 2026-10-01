@@ -13,6 +13,30 @@
 > **Live Cloudflare Tunnel:** `https://petroleum-echo-mirrors-rio.trycloudflare.com`  
 > **Last Synchronized:** 2026-09-14 16:55 Local Time  
 
+## [Update 019] — HOUR/MINUTE Display Fixes, Half-Punch Detection & Legend Strip (2026-10-01)
+**Type:** UI Bug Fix + Usability Improvement  
+**Status:** ✅ COMPLETED & VERIFIED
+
+### Problems Fixed
+1. **Ghostly digits on Fridays** — Off-day credit hours (auto-calculated from adjacent working days) now display in *muted italic grey* in both HTML and PDF, visually distinct from real punched hours.
+2. **MINUTE column blank** — Previously `forceHours` and credit-hour rows showed blank MINUTE cells (looked like truncated `10`). Now always shows `0` so `10 | 0` is clear instead of `10 | `.
+3. **Half-punch (check-in without check-out)** — These rows now show in **yellow background** with an amber **½** in the Abs column (instead of being silently counted as Absent with full red). Check-in time is still visible. Counted in absent count to flag for correction.
+4. **Total hours override indicator** — When an admin has manually overridden total duty hours, the HOUR cell in the Total row now shows `248*` (with asterisk) and the legend explains it.
+
+### New Features
+- **Legend strip** below the attendance table explains all row states: Friday/off-day, ½ half-punch, A absent, italic = credit, * = override.
+- **PDF engine** mirrors all the same fixes: muted grey for credit hours (HOUR+MINUTE columns), amber `½` for half-punch rows.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `index.html` | `renderA4Sheet()` row loop — isCreditHour flag, isHalfPunch detection, MINUTE always `0`, hrStyle muting |
+| `index.html` | `renderA4Sheet()` tfoot Total — asterisk when `overrideDutyHours` active |
+| `index.html` | `renderA4Sheet()` — legend strip added below table |
+| `index.html` | `_drawVoucherOnPdf()` — same credit-hour, half-punch, `0` minute fixes for PDF |
+
+---
+
 ## [Update 018] — 12-Hour Time Display & Approval Note Month Isolation Fix (2026-10-01)
 **Type:** Display Fix + Monthly Data Isolation Bug Fix  
 **Status:** ✅ COMPLETED & VERIFIED
