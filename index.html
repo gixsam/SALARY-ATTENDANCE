@@ -1118,6 +1118,18 @@
             return `${Math.floor(min/60)%24}`.padStart(2,'0') + ':' + `${min%60}`.padStart(2,'0');
         }
 
+        // ── Update 018: 12-hour display (no AM/PM) ──────────────────────────
+        // "14:04" → "2:04" | "08:52" → "8:52" | "00:30" → "12:30"
+        function formatTime12(str) {
+            if (!str) return '';
+            const parts = str.match(/^(\d{1,2}):(\d{2})/);
+            if (!parts) return str;
+            let h = parseInt(parts[1], 10);
+            const m = parts[2];
+            h = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+            return `${h}:${m}`;
+        }
+
         function calcTime(inT, outT) {
             let im = parseTime(inT), om = parseTime(outT);
             if (!im || !om || om === im) return { tm:0, h:0, m:0, di:'', do:'' };
@@ -1268,8 +1280,8 @@
 
                 rows += `<tr class="${rCls} border-b border-slate-300 text-[8.5px] sm:text-[9.5px]">
                     <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono font-bold">${d}/${APP_STATE.currentMonth+1}/${String(APP_STATE.currentYear).slice(-2)}</td>
-                    <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono">${c.di||log.inTime||''}</td>
-                    <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono">${c.do||log.outTime||''}</td>
+                    <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono">${formatTime12(c.di||log.inTime||'')}</td>
+                    <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono">${formatTime12(c.do||log.outTime||'')}</td>
                     <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono font-black">${rowH}</td>
                     <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-mono font-black">${rowM}</td>
                     <td align="center" style="text-align: center !important; vertical-align: middle !important;" class="border-r border-slate-300 font-black text-red-600">${abs}</td>
@@ -1353,7 +1365,7 @@
                     <div class="border-2 border-slate-900 p-1 bg-slate-50 flex flex-col justify-between">
                         <div class="space-y-0.5">
                             <div class="flex justify-between"><span class="text-slate-600">Basic Salary:</span><span class="font-bold font-mono">৳ ${emp.basicSalary.toLocaleString()}</span></div>
-                            <div class="flex justify-between text-indigo-800"><span>Status:</span><span class="font-bold font-mono">${emp.approvalNote || 'Approved'}</span></div>
+                            <div class="flex justify-between text-indigo-800"><span>Status:</span><span class="font-bold font-mono">${monthData.approvalNote || 'Approved'}</span></div>
                             <div class="flex justify-between text-amber-700"><span>Advance Deduct:</span><span class="font-bold font-mono">${adv>0 ? '- ৳ ' + adv.toLocaleString() : '-'}</span></div>
                         </div>
                         <div class="border-t border-slate-400 pt-0.5 mt-0.5 flex justify-between items-center">
@@ -2096,7 +2108,7 @@
                             </div>
                             <div class="bg-slate-50 border border-slate-200/90 p-1.5 rounded-xl flex flex-col justify-center">
                                 <span class="text-[9.5px] font-extrabold text-slate-500 uppercase tracking-wider block">Note</span>
-                                <b class="text-slate-800 text-[10px] font-bold truncate">${emp.approvalNote||'Approved'}</b>
+                                <b class="text-slate-800 text-[10px] font-bold truncate">${mData.approvalNote||'Approved'}</b>
                             </div>
                         </div>
 
@@ -2491,7 +2503,7 @@
                 fillRect(rx, Y, CW, RH, bg);
                 draw(C.sl300); lw(0.15);
 
-                const vals = [dLabel, c.di || log.inTime || '', c.do || log.outTime || '', rH, rM, absT, rem];
+                const vals = [dLabel, formatTime12(c.di || log.inTime || ''), formatTime12(c.do || log.outTime || ''), rH, rM, absT, rem];
                 COL.forEach((col, i) => {
                     pdf.rect(rx, Y, col.w, RH, 'S');
                     const v = vals[i];
@@ -2780,12 +2792,18 @@
             ];
 
             APP_STATE.employees.forEach(emp => {
+                const mData = getEmpMonthData(emp, APP_STATE.currentYear, APP_STATE.currentMonth);
                 let tHrs = 248, rMin = 0;
-                if (emp.overrideDutyHours) {
+                if (mData.overrideDutyHours !== undefined) {
+                    tHrs = Math.floor(mData.overrideDutyHours);
+                    rMin = Math.round((mData.overrideDutyHours - tHrs) * 60);
+                } else if (emp.overrideDutyHours) {
                     tHrs = Math.floor(emp.overrideDutyHours);
                     rMin = Math.round((emp.overrideDutyHours - tHrs) * 60);
                 }
-                const net = emp.overrideNet !== undefined ? emp.overrideNet : Math.max(0, Math.round((tHrs + rMin/60) * (emp.basicSalary / 248)) - (emp.advance||0) - (emp.fine||0));
+                const adv = mData.advance || 0;
+                const fn  = mData.fine || 0;
+                const net = mData.overrideNet !== undefined ? mData.overrideNet : Math.max(0, Math.round((tHrs + rMin/60) * (emp.basicSalary / 248)) - adv - fn);
 
                 data.push([
                     emp.id, 
@@ -2793,10 +2811,10 @@
                     emp.dept||'Staff', 
                     emp.basicSalary, 
                     `${tHrs}h ${rMin}m`, 
-                    emp.advance || 0, 
-                    emp.fine || 0, 
+                    adv, 
+                    fn, 
                     net,
-                    emp.approvalNote || "Approved"
+                    mData.approvalNote || "Approved"
                 ]);
             });
 

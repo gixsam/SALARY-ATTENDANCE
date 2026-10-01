@@ -13,6 +13,40 @@
 > **Live Cloudflare Tunnel:** `https://petroleum-echo-mirrors-rio.trycloudflare.com`  
 > **Last Synchronized:** 2026-09-14 16:55 Local Time  
 
+## [Update 018] — 12-Hour Time Display & Approval Note Month Isolation Fix (2026-10-01)
+**Type:** Display Fix + Monthly Data Isolation Bug Fix  
+**Status:** ✅ COMPLETED & VERIFIED
+
+### User Requests Fixed
+1. **12-Hour Time Display (No AM/PM):** Check-In and Check-Out columns in both the HTML voucher sheet and PDF download now show times in 12-hour format without AM/PM (e.g., `14:04` → `2:04`, `23:35` → `11:35`, `08:52` → `8:52`). Internal stored data remains in 24-hour HH:MM format. Applies even when paste log is supplied in 24-hour format.
+2. **Approval Note Month Isolation:** The "Status" field on the HTML voucher, mobile payroll card, PDF voucher, and Excel payroll export were all reading `emp.approvalNote` (August 2026 legacy field) instead of the month-scoped `getEmpMonthData()` value. Fixed across all 4 rendering locations.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `index.html` | Added `formatTime12(str)` helper after `format24()` (~line 1119) |
+| `index.html` | `renderA4Sheet()` Check-In/Out cells wrapped with `formatTime12()` |
+| `index.html` | `renderA4Sheet()` Status field changed from `emp.approvalNote` → `monthData.approvalNote` |
+| `index.html` | `_drawVoucherOnPdf()` `vals` array time slots wrapped with `formatTime12()` |
+| `index.html` | Mobile payroll card Note field changed from `emp.approvalNote` → `mData.approvalNote` |
+| `index.html` | `exportPayrollSummaryExcel()` now calls `getEmpMonthData()` for all month-scoped fields |
+
+### Logic: formatTime12()
+```javascript
+function formatTime12(str) {
+    if (!str) return '';
+    const parts = str.match(/^(\d{1,2}):(\d{2})/);
+    if (!parts) return str;
+    let h = parseInt(parts[1], 10);
+    const m = parts[2];
+    h = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+    return `${h}:${m}`;
+}
+```
+Examples: `"14:04"→"2:04"` | `"00:30"→"12:30"` | `"08:52"→"8:52"` | `"23:35"→"11:35"`
+
+---
+
 ## [Update 017] — Universal Attendance Log Parser Engine & September Multi-Format Fix (2026-10-01)
 **Type:** Major Core Attendance Parser & Multi-Format Ingestion Engine Upgrade  
 **Status:** ✅ COMPLETED & VERIFIED
