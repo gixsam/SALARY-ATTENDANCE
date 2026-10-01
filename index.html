@@ -1130,12 +1130,22 @@
             return `${h}:${m}`;
         }
 
+        // Max daily duty hours counted (ZKTeco punches can include overnight/split data)
+        // Anything above this cap is flagged as suspicious (orange row in HTML, ⚠ remark in PDF)
+        const MAX_DAILY_HOURS = 14; // hours
+        const MAX_DAILY_MIN   = MAX_DAILY_HOURS * 60; // 840 minutes
+
         function calcTime(inT, outT) {
             let im = parseTime(inT), om = parseTime(outT);
-            if (!im || !om || om === im) return { tm:0, h:0, m:0, di:'', do:'' };
+            // Fix: explicit null/undefined check — parseTime returns 0 for "00:00" which is valid midnight
+            if (im === null || im === undefined || om === null || om === undefined || om === im) {
+                return { tm: 0, h: 0, m: 0, di: '', do: '', capped: false };
+            }
             let diff = om > im ? (om - im) : (1440 - im + om);
-            if (diff > 960) diff = 600;
-            return { tm: diff, h: Math.floor(diff/60), m: diff%60, di: inT, do: outT };
+            // Cap unrealistically long shifts (> MAX_DAILY_HOURS) — flag them
+            const capped = diff > MAX_DAILY_MIN;
+            if (capped) diff = MAX_DAILY_MIN;
+            return { tm: diff, h: Math.floor(diff / 60), m: diff % 60, di: inT, do: outT, capped };
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -1255,6 +1265,8 @@
                 let isCreditHour = false;
                 // Track half-punch (check-in without check-out)
                 let isHalfPunch = false;
+                // Track if calcTime capped the hours (shift > MAX_DAILY_HOURS)
+                let isCapped = false;
 
                 if (isF || hol) {
                     rCls = isF ? 'bg-friday' : 'bg-holiday';
@@ -1292,12 +1304,20 @@
                     tMin += c.tm;
                     rowH = c.h > 0 ? c.h : '0';
                     rowM = c.m > 0 ? c.m : '0';
+                    if (c.capped) {
+                        // Shift > MAX_DAILY_HOURS — orange flag row
+                        isCapped = true;
+                        rCls = 'bg-orange-50';
+                        rem = (rem ? rem + ' ' : '') + `⚠ Capped ${MAX_DAILY_HOURS}h`;
+                    }
                 }
 
                 // Style helpers for HOUR/MINUTE cells
                 const hrStyle  = isCreditHour
                     ? 'color:#94a3b8;font-style:italic;'   // muted for auto off-day credit
-                    : (abs === 'A' ? 'color:#ef4444;' : '');
+                    : isCapped
+                        ? 'color:#ea580c;'                  // orange for capped hours
+                        : (abs === 'A' ? 'color:#ef4444;' : '');
                 const hrCls    = `border-r border-slate-300 font-mono font-black`;
                 const checkInDisplay  = isHalfPunch
                     ? formatTime12(log.inTime || '')        // keep the partial check-in visible
@@ -1385,9 +1405,9 @@
                 <!-- Legend strip -->
                 <div class="flex flex-wrap gap-x-3 gap-y-0.5 text-[7px] sm:text-[8px] text-slate-500 mb-1 px-0.5">
                     <span><span class="inline-block w-2 h-2 rounded-sm bg-friday border border-slate-300 mr-0.5"></span>Friday/Off-day (italic hr = auto credit)</span>
-                    <span><span class="inline-block w-2 h-2 rounded-sm bg-yellow-50 border border-yellow-300 mr-0.5"></span><span style="color:#d97706;font-weight:900;">½</span> = Missing check-out (half punch)</span>
+                    <span><span class="inline-block w-2 h-2 rounded-sm bg-yellow-50 border border-yellow-300 mr-0.5"></span><span style="color:#d97706;font-weight:900;">½</span> = Missing check-out</span>
                     <span><span class="inline-block w-2 h-2 rounded-sm bg-absent border border-red-300 mr-0.5"></span>A = Absent</span>
-                    <span style="color:#94a3b8;font-style:italic;">italic hr = off-day credit (not punched)</span>
+                    <span><span class="inline-block w-2 h-2 rounded-sm bg-orange-50 border border-orange-300 mr-0.5"></span><span style="color:#ea580c;font-weight:900;">⚠</span> = Hours capped at ${MAX_DAILY_HOURS}h (check data)</span>
                     ${monthData.overrideDutyHours !== undefined ? '<span class="text-indigo-600 font-bold">* = Total hours overridden</span>' : ''}
                 </div>
 
@@ -2513,7 +2533,7 @@
 
                 let bg = C.white, absT = '', rH = '', rM = '', rem = log.remarks || '';
                 let absC = C.black;
-                let isCreditHourPdf = false, isHalfPunchPdf = false;
+                let isCreditHourPdf = false, isHalfPunchPdf = false, isCappedPdf = false;
 
                 if (isF || hol) {
                     bg = isF ? C.friday : C.holiday;
@@ -2540,6 +2560,11 @@
                     bg = C.absent; absT = 'A'; absC = C.red; absentCount++;
                 } else {
                     tMin += c.tm; rH = c.h > 0 ? c.h : '0'; rM = c.m > 0 ? c.m : '0';
+                    if (c.capped) {
+                        isCappedPdf = true;
+                        bg = [255, 237, 213]; // orange-100
+                        rem = (rem ? rem + ' ' : '') + `\u26A0 Cap ${MAX_DAILY_HOURS}h`;
+                    }
                 }
 
                 const dLabel = d + '/' + (APP_STATE.currentMonth + 1) + '/' + String(APP_STATE.currentYear).slice(-2);
@@ -2557,11 +2582,13 @@
                         const s = i === 6 ? 7.5 : 8.5;
                         pdf.setFontSize(s);
                         pdf.setFont('helvetica', (i === 0 || (i >= 3 && i <= 5)) ? 'bold' : 'normal');
-                        // Colour logic: credit hours → grey italic, half-punch abs → amber, abs → red, else black
+                        // Colour logic: credit hours → grey, capped hours → orange, half-punch abs → amber, abs → red, else black
                         if (i === 5) {
                             ink(absC);  // Abs column uses absC (red or amber)
                         } else if (isCreditHourPdf && (i === 3 || i === 4)) {
                             ink([148, 163, 184]); // slate-400 muted for credit hours
+                        } else if (isCappedPdf && (i === 3 || i === 4)) {
+                            ink([234, 88, 12]);  // orange-600 for capped hours
                         } else {
                             ink(C.black);
                         }
